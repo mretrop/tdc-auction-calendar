@@ -26,6 +26,9 @@ data/
 .DS_Store
 Thumbs.db
 
+# Worktrees
+.worktrees/
+
 # Testing
 .pytest_cache/
 .coverage
