@@ -1,0 +1,746 @@
+[
+  {
+    "state": "AK",
+    "sale_type": "deed",
+    "statutory_timing_description": "Tax foreclosure sales conducted by boroughs/municipalities, typically in the fall.",
+    "typical_months": [
+      9,
+      10,
+      11
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Alaska Stat. § 29.45.320–29.45.480"
+  },
+  {
+    "state": "AL",
+    "sale_type": "lien",
+    "statutory_timing_description": "Tax lien auctions held annually, typically in May or June, conducted by county tax collectors.",
+    "typical_months": [
+      5,
+      6
+    ],
+    "notice_requirement_weeks": 3,
+    "redemption_period_months": 36,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Ala. Code § 40-10"
+  },
+  {
+    "state": "AR",
+    "sale_type": "deed",
+    "statutory_timing_description": "Tax deed sales held by the Commissioner of State Lands, typically in the summer months.",
+    "typical_months": [
+      6,
+      7,
+      8
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Ark. Code Ann. § 26-37"
+  },
+  {
+    "state": "AZ",
+    "sale_type": "lien",
+    "statutory_timing_description": "County treasurers conduct tax lien sales annually in February.",
+    "typical_months": [
+      2
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 36,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Ariz. Rev. Stat. § 42-18101"
+  },
+  {
+    "state": "CA",
+    "sale_type": "deed",
+    "statutory_timing_description": "County tax collectors hold public auction sales of tax-defaulted property, typically in spring and fall.",
+    "typical_months": [
+      3,
+      4,
+      5,
+      10
+    ],
+    "notice_requirement_weeks": 3,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Cal. Rev. & Tax. Code §§ 3691-3731"
+  },
+  {
+    "state": "CO",
+    "sale_type": "lien",
+    "statutory_timing_description": "County treasurers hold annual tax lien sales in November.",
+    "typical_months": [
+      11
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 36,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Colo. Rev. Stat. § 39-11"
+  },
+  {
+    "state": "CT",
+    "sale_type": "deed",
+    "statutory_timing_description": "Municipalities conduct tax sales, typically in the spring and summer months.",
+    "typical_months": [
+      4,
+      5,
+      6
+    ],
+    "notice_requirement_weeks": 3,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Conn. Gen. Stat. § 12-157"
+  },
+  {
+    "state": "DC",
+    "sale_type": "lien",
+    "statutory_timing_description": "District conducts annual tax lien sale, typically in July.",
+    "typical_months": [
+      7
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 6,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "D.C. Code § 47-1301"
+  },
+  {
+    "state": "DE",
+    "sale_type": "deed",
+    "statutory_timing_description": "County sheriffs conduct monition sales for tax delinquent properties, typically in the summer.",
+    "typical_months": [
+      6,
+      7,
+      8
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Del. Code Ann. tit. 9 § 8726"
+  },
+  {
+    "state": "FL",
+    "sale_type": "lien",
+    "statutory_timing_description": "County tax collectors hold annual tax certificate (lien) sales in June.",
+    "typical_months": [
+      6
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 24,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Fla. Stat. Ch. 197"
+  },
+  {
+    "state": "GA",
+    "sale_type": "deed",
+    "statutory_timing_description": "County tax commissioners conduct tax sales on the first Tuesday of the month, typically in spring or summer.",
+    "typical_months": [
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "O.C.G.A. § 48-4"
+  },
+  {
+    "state": "HI",
+    "sale_type": "deed",
+    "statutory_timing_description": "County treasurers conduct public auctions for tax-delinquent properties.",
+    "typical_months": [
+      7,
+      8,
+      9
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Haw. Rev. Stat. § 246"
+  },
+  {
+    "state": "IA",
+    "sale_type": "lien",
+    "statutory_timing_description": "County treasurers hold annual tax sale on the third Monday in June.",
+    "typical_months": [
+      6
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 21,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Iowa Code Ch. 446"
+  },
+  {
+    "state": "ID",
+    "sale_type": "deed",
+    "statutory_timing_description": "County tax collectors hold annual tax deed sales, typically in the spring.",
+    "typical_months": [
+      4,
+      5,
+      6
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Idaho Code § 63-1005"
+  },
+  {
+    "state": "IL",
+    "sale_type": "lien",
+    "statutory_timing_description": "County treasurers conduct annual tax lien sales, typically in October and November.",
+    "typical_months": [
+      10,
+      11
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 24,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "35 ILCS 200"
+  },
+  {
+    "state": "IN",
+    "sale_type": "lien",
+    "statutory_timing_description": "County auditors conduct annual tax lien sales, typically in the fall.",
+    "typical_months": [
+      9,
+      10
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 12,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Ind. Code § 6-1.1-24"
+  },
+  {
+    "state": "KS",
+    "sale_type": "deed",
+    "statutory_timing_description": "County treasurers hold annual tax foreclosure sales, typically in August or September.",
+    "typical_months": [
+      8,
+      9
+    ],
+    "notice_requirement_weeks": 3,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Kan. Stat. Ann. § 79-2401"
+  },
+  {
+    "state": "KY",
+    "sale_type": "lien",
+    "statutory_timing_description": "County clerks sell tax lien certificates, typically from January through late spring.",
+    "typical_months": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 12,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Ky. Rev. Stat. § 134.490"
+  },
+  {
+    "state": "LA",
+    "sale_type": "lien",
+    "statutory_timing_description": "Parish tax collectors hold annual tax sales, typically in spring.",
+    "typical_months": [
+      3,
+      4,
+      5
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 36,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "La. R.S. 47:2153"
+  },
+  {
+    "state": "MA",
+    "sale_type": "deed",
+    "statutory_timing_description": "Municipal tax collectors conduct tax takings and subsequent foreclosure sales.",
+    "typical_months": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "notice_requirement_weeks": 3,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Mass. Gen. Laws Ch. 60 § 43"
+  },
+  {
+    "state": "MD",
+    "sale_type": "lien",
+    "statutory_timing_description": "Counties conduct annual tax lien certificate sales, typically in May or June.",
+    "typical_months": [
+      5,
+      6
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 6,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Md. Code Ann., Tax-Prop. § 14-808"
+  },
+  {
+    "state": "ME",
+    "sale_type": "deed",
+    "statutory_timing_description": "Municipalities conduct tax lien foreclosure proceedings, typically concluding in the fall.",
+    "typical_months": [
+      8,
+      9,
+      10
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Me. Rev. Stat. tit. 36 § 943"
+  },
+  {
+    "state": "MI",
+    "sale_type": "deed",
+    "statutory_timing_description": "County treasurers conduct annual tax foreclosure auctions, typically in the fall.",
+    "typical_months": [
+      9,
+      10,
+      11
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Mich. Comp. Laws § 211.78m"
+  },
+  {
+    "state": "MN",
+    "sale_type": "deed",
+    "statutory_timing_description": "Counties conduct tax forfeiture sales, typically in the spring and summer.",
+    "typical_months": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Minn. Stat. § 282.01"
+  },
+  {
+    "state": "MO",
+    "sale_type": "lien",
+    "statutory_timing_description": "County collectors hold annual tax lien sales on the fourth Monday of August.",
+    "typical_months": [
+      8
+    ],
+    "notice_requirement_weeks": 3,
+    "redemption_period_months": 12,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Mo. Rev. Stat. § 140.150"
+  },
+  {
+    "state": "MS",
+    "sale_type": "lien",
+    "statutory_timing_description": "County tax collectors hold annual tax lien sales on the last Monday of August.",
+    "typical_months": [
+      8
+    ],
+    "notice_requirement_weeks": 3,
+    "redemption_period_months": 24,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Miss. Code Ann. § 27-41-55"
+  },
+  {
+    "state": "MT",
+    "sale_type": "lien",
+    "statutory_timing_description": "County treasurers hold annual tax lien sales, typically in July.",
+    "typical_months": [
+      7
+    ],
+    "notice_requirement_weeks": 3,
+    "redemption_period_months": 36,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Mont. Code Ann. § 15-17"
+  },
+  {
+    "state": "NC",
+    "sale_type": "deed",
+    "statutory_timing_description": "Counties conduct tax foreclosure sales, typically in the spring.",
+    "typical_months": [
+      3,
+      4,
+      5,
+      6
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "N.C. Gen. Stat. § 105-374"
+  },
+  {
+    "state": "ND",
+    "sale_type": "lien",
+    "statutory_timing_description": "County auditors hold annual tax lien sales in October.",
+    "typical_months": [
+      10
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 36,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "N.D. Cent. Code § 57-24"
+  },
+  {
+    "state": "NE",
+    "sale_type": "lien",
+    "statutory_timing_description": "County treasurers hold annual tax certificate sales on the first Monday in March.",
+    "typical_months": [
+      3
+    ],
+    "notice_requirement_weeks": 3,
+    "redemption_period_months": 36,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Neb. Rev. Stat. § 77-1801"
+  },
+  {
+    "state": "NH",
+    "sale_type": "deed",
+    "statutory_timing_description": "Municipal tax collectors conduct tax lien deedings after two-year process.",
+    "typical_months": [
+      4,
+      5,
+      6
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "N.H. Rev. Stat. Ann. § 80:76"
+  },
+  {
+    "state": "NJ",
+    "sale_type": "lien",
+    "statutory_timing_description": "Municipalities conduct annual tax lien sales, typically in October or November.",
+    "typical_months": [
+      10,
+      11
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 24,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "N.J.S.A. 54:5"
+  },
+  {
+    "state": "NM",
+    "sale_type": "deed",
+    "statutory_timing_description": "Counties conduct tax sales for delinquent properties, typically in the fall.",
+    "typical_months": [
+      10,
+      11
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "N.M. Stat. Ann. § 7-38-65"
+  },
+  {
+    "state": "NV",
+    "sale_type": "deed",
+    "statutory_timing_description": "County treasurers conduct tax sale of properties delinquent for three or more years.",
+    "typical_months": [
+      6,
+      7
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Nev. Rev. Stat. § 361.585"
+  },
+  {
+    "state": "NY",
+    "sale_type": "deed",
+    "statutory_timing_description": "Counties conduct in rem tax foreclosure proceedings and public auctions, timing varies by county.",
+    "typical_months": [
+      3,
+      4,
+      5,
+      9,
+      10,
+      11
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "N.Y. Real Prop. Tax Law Art. 11"
+  },
+  {
+    "state": "OH",
+    "sale_type": "lien",
+    "statutory_timing_description": "County treasurers sell tax lien certificates, with timing varying by county throughout the year.",
+    "typical_months": [
+      9,
+      10,
+      11
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 12,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Ohio Rev. Code § 5721"
+  },
+  {
+    "state": "OK",
+    "sale_type": "lien",
+    "statutory_timing_description": "County treasurers hold annual tax lien sales in June.",
+    "typical_months": [
+      6
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 24,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Okla. Stat. tit. 68 § 3105"
+  },
+  {
+    "state": "OR",
+    "sale_type": "deed",
+    "statutory_timing_description": "Counties conduct tax foreclosure sales, typically in the spring or summer.",
+    "typical_months": [
+      4,
+      5,
+      6
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Or. Rev. Stat. § 312"
+  },
+  {
+    "state": "PA",
+    "sale_type": "deed",
+    "statutory_timing_description": "County tax claim bureaus hold upset and judicial tax sales, typically in September.",
+    "typical_months": [
+      9
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "72 Pa. Stat. § 5860.101"
+  },
+  {
+    "state": "RI",
+    "sale_type": "deed",
+    "statutory_timing_description": "Municipal tax collectors conduct tax sales, typically in the fall.",
+    "typical_months": [
+      10,
+      11
+    ],
+    "notice_requirement_weeks": 3,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "R.I. Gen. Laws § 44-9"
+  },
+  {
+    "state": "SC",
+    "sale_type": "lien",
+    "statutory_timing_description": "County tax collectors hold annual delinquent tax sales on the first Monday in October or November.",
+    "typical_months": [
+      10,
+      11
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 12,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "S.C. Code Ann. § 12-51"
+  },
+  {
+    "state": "SD",
+    "sale_type": "lien",
+    "statutory_timing_description": "County treasurers hold annual tax lien sales on the third Monday in December.",
+    "typical_months": [
+      12
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 48,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "S.D. Codified Laws § 10-23"
+  },
+  {
+    "state": "TN",
+    "sale_type": "deed",
+    "statutory_timing_description": "County clerks conduct annual tax sales, timing varies by county but typically in spring.",
+    "typical_months": [
+      3,
+      4,
+      5
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Tenn. Code Ann. § 67-5-2501"
+  },
+  {
+    "state": "TX",
+    "sale_type": "deed",
+    "statutory_timing_description": "County constables or sheriffs conduct tax deed sales on the first Tuesday of every month at the county courthouse.",
+    "typical_months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "notice_requirement_weeks": 3,
+    "redemption_period_months": 6,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Tex. Tax Code Ch. 34"
+  },
+  {
+    "state": "UT",
+    "sale_type": "deed",
+    "statutory_timing_description": "Counties conduct annual tax sales, typically in May.",
+    "typical_months": [
+      5
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Utah Code § 59-2-1351"
+  },
+  {
+    "state": "VA",
+    "sale_type": "deed",
+    "statutory_timing_description": "County and city treasurers conduct tax sales, timing varies throughout the year.",
+    "typical_months": [
+      3,
+      4,
+      5,
+      6,
+      9,
+      10
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Va. Code § 58.1-3965"
+  },
+  {
+    "state": "VT",
+    "sale_type": "lien",
+    "statutory_timing_description": "Town tax collectors sell tax liens to the municipality, which can then sell at auction.",
+    "typical_months": [
+      1,
+      2
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 12,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Vt. Stat. Ann. tit. 32 § 5252"
+  },
+  {
+    "state": "WA",
+    "sale_type": "deed",
+    "statutory_timing_description": "County treasurers conduct annual tax foreclosure sales, typically in the fall.",
+    "typical_months": [
+      9,
+      10,
+      11
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Wash. Rev. Code § 84.64"
+  },
+  {
+    "state": "WI",
+    "sale_type": "deed",
+    "statutory_timing_description": "Counties conduct tax deed sales for delinquent properties, typically in the fall.",
+    "typical_months": [
+      9,
+      10
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": null,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Wis. Stat. § 75"
+  },
+  {
+    "state": "WV",
+    "sale_type": "lien",
+    "statutory_timing_description": "County sheriffs conduct annual tax lien sales in October and November.",
+    "typical_months": [
+      10,
+      11
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 18,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "W. Va. Code § 11A-3"
+  },
+  {
+    "state": "WY",
+    "sale_type": "lien",
+    "statutory_timing_description": "County treasurers hold annual tax lien sales in August.",
+    "typical_months": [
+      8
+    ],
+    "notice_requirement_weeks": 4,
+    "redemption_period_months": 48,
+    "public_notice_url": null,
+    "state_agency_url": null,
+    "governing_statute": "Wyo. Stat. § 39-13-108"
+  }
+]
