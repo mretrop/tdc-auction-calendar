@@ -34,6 +34,18 @@ Array of objects matching the `CountyInfo` Pydantic model:
 - FIPS codes, state, county name, timezone: generated from training knowledge (stable facts)
 - `known_auction_vendor`: populated for well-known mappings (e.g., FL uses RealAuction), null where uncertain
 - `treasurer_url`, `tax_sale_page_url`: null (to be filled via scraping/research later)
+- Allowed vendor values: `RealAuction`, `Bid4Assets`, `GovEase`, `Grant Street`, `SRI`, `direct`, or `null`
+
+### Multi-Timezone States
+
+Some states span multiple timezones. Per-county timezone will be assigned based on geographic location:
+- FL: most counties `America/New_York`, panhandle counties `America/Chicago`
+- IN: `America/Indiana/Indianapolis` and variants
+- TX, ND, NE, KS, etc.: split by county
+
+### Sort Order
+
+Array sorted by `state` (ascending), then `county_name` (ascending) within each state. Consistent with `states.json` sort-by-state pattern.
 
 ### Priority Assignment
 
@@ -59,6 +71,8 @@ Mirrors `test_seed_states.py` pattern:
 10. Valid timezone strings (IANA via zoneinfo)
 11. Full coverage state minimums — FL >= 67, IL >= 102, NJ >= 21, CO >= 64, CA >= 58
 12. Spot-check known counties (Miami-Dade, Cook, Los Angeles, etc.)
+13. Valid `known_auction_vendor` values — non-null values must be in allowed set
+14. No duplicate county names within the same state
 
 ## Architecture Impact
 
