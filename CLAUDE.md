@@ -53,7 +53,16 @@ uv run alembic revision --autogenerate -m "description"  # Generate new migratio
 - `Base` (DeclarativeBase) lives in `models/jurisdiction.py` and is re-exported from `models/__init__.py`
 - Seed loader is idempotent — checks primary key existence before inserting
 - `uv` is the package manager (not pip)
+- Seed data tests should validate against both Pydantic models AND ORM models (since seed_loader uses the ORM layer)
+- Use `SEED_DIR` from `db/seed_loader.py` when referencing seed files in tests (don't hardcode paths)
+- Worktrees go in `.worktrees/` (already in .gitignore)
+
+## Domain Notes
+
+- Not all 50 states have tax sales — only include states with active lien/deed/hybrid auctions in seed data
+- `redemption_period_months` is typically null for deed states, but some (e.g., TX) have statutory redemption periods — this is correct, not a bug
+- `typical_months` uses `list[int]` (1-12), not month name strings — format for humans downstream
 
 ## Progress
 
-Issues are tracked as GitHub issues organized by milestones (M1–M4). Issues #1–3 are complete. Next up: issue #4 (Seed data: states.json for all 50 states).
+Issues are tracked as GitHub issues organized by milestones (M1–M4). Issues #1–4 are complete. Next up: issue #5.
