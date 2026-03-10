@@ -65,4 +65,4 @@ uv run alembic revision --autogenerate -m "description"  # Generate new migratio
 
 ## Progress
 
-Issues are tracked as GitHub issues organized by milestones (M1–M4). Issues #1–4 are complete. Next up: issue #5.
+Issues are tracked as GitHub issues organized by milestones (M1–M4). Issues #1–5 are complete. Next up: issue #6.
