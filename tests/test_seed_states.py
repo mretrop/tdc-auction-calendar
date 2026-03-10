@@ -24,10 +24,19 @@ def test_seed_file_exists():
     assert SEED_FILE.exists()
 
 
+def test_entry_count(seed_data):
+    """Guard against accidental deletions."""
+    assert len(seed_data) >= 45, f"Expected at least 45 states, got {len(seed_data)}"
+
+
 def test_all_entries_validate(seed_data):
     """Every entry must pass Pydantic StateRules validation."""
     for entry in seed_data:
-        StateRules(**entry)
+        state = entry.get("state", "<unknown>")
+        try:
+            StateRules(**entry)
+        except Exception as exc:
+            pytest.fail(f"State {state} failed validation: {exc}")
 
 
 def test_no_duplicate_states(seed_data):
@@ -73,3 +82,11 @@ def test_state_codes_are_valid(seed_data):
     for entry in seed_data:
         s = entry["state"]
         assert len(s) == 2 and s.isalpha() and s.isupper(), f"Invalid state code: {s}"
+
+
+def test_notice_requirement_weeks_positive(seed_data):
+    """notice_requirement_weeks must be a positive integer."""
+    for entry in seed_data:
+        weeks = entry.get("notice_requirement_weeks")
+        if weeks is not None:
+            assert isinstance(weeks, int) and weeks >= 1, f"State {entry['state']}: invalid notice_requirement_weeks {weeks}"
