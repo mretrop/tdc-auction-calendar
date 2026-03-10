@@ -1,0 +1,39 @@
+[project]
+name = "tdc-auction-calendar"
+version = "0.1.0"
+description = "Tax deed auction calendar aggregator"
+readme = "README.md"
+authors = [
+    { name = "Mason Porter", email = "68439368+mretrop@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "sqlalchemy>=2.0",
+    "pydantic>=2.0",
+    "alembic>=1.13",
+    "typer>=0.12",
+    "icalendar>=6.0",
+    "feedgen>=1.0",
+    "structlog>=24.0",
+    "httpx>=0.27",
+    "crawl4ai>=0.4",
+    "supabase>=2.0",
+    "anthropic>=0.40",
+]
+
+[project.scripts]
+tdc-auction-calendar = "tdc_auction_calendar.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.10.9,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
