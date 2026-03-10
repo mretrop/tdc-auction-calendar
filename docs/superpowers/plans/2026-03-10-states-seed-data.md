@@ -25,7 +25,7 @@
 **Files:**
 - Create: `tests/test_seed_states.py`
 
-- [ ] **Step 1: Write the failing test file**
+- [x] **Step 1: Write the failing test file**
 
 ```python
 """Validate states.json seed data against StateRules Pydantic model."""
@@ -105,12 +105,12 @@ def test_state_codes_are_valid(seed_data):
         assert len(s) == 2 and s.isalpha() and s.isupper(), f"Invalid state code: {s}"
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `uv run pytest tests/test_seed_states.py -v`
 Expected: FAIL — seed file does not exist
 
-- [ ] **Step 3: Commit the test**
+- [x] **Step 3: Commit the test**
 
 ```bash
 git add tests/test_seed_states.py
@@ -121,7 +121,7 @@ git commit -m "test: add validation tests for states.json seed data"
 
 ### Task 2: Spot-check the 6 required states
 
-- [ ] **Step 4: Web search FL, TX, CA, CO, IL, NJ**
+- [x] **Step 4: Web search FL, TX, CA, CO, IL, NJ**
 
 For each state, verify:
 - `sale_type` (lien/deed/hybrid)
@@ -130,7 +130,7 @@ For each state, verify:
 
 Use web search to confirm against primary sources (state statutes, official .gov sites).
 
-- [ ] **Step 5: Document spot-check findings**
+- [x] **Step 5: Document spot-check findings**
 
 Record findings as a comment in the task or note discrepancies to fix in the seed data.
 
@@ -138,7 +138,7 @@ Record findings as a comment in the task or note discrepancies to fix in the see
 
 ### Task 3: Create states.json
 
-- [ ] **Step 6: Create the seed file**
+- [x] **Step 6: Create the seed file**
 
 **Files:**
 - Create: `src/tdc_auction_calendar/db/seed/states.json`
@@ -149,19 +149,19 @@ Write the complete JSON array with all applicable US states. Each entry must inc
 - `statutory_timing_description`: human-readable description of when auctions occur
 - `typical_months`: array of integer months (1-12)
 - `notice_requirement_weeks`: integer
-- `redemption_period_months`: integer or null (null for deed states)
+- `redemption_period_months`: integer or null (typically null for deed states, but some like TX have statutory redemption periods)
 - `public_notice_url`: string or null
 - `state_agency_url`: string or null
 - `governing_statute`: statute reference string
 
 States to include: all US states with tax lien, deed, or hybrid sale processes. Omit states without tax sale auctions.
 
-- [ ] **Step 7: Run tests to verify they pass**
+- [x] **Step 7: Run tests to verify they pass**
 
 Run: `uv run pytest tests/test_seed_states.py -v`
 Expected: ALL PASS
 
-- [ ] **Step 8: Commit the seed file**
+- [x] **Step 8: Commit the seed file**
 
 ```bash
 git add src/tdc_auction_calendar/db/seed/states.json
@@ -172,12 +172,12 @@ git commit -m "feat: add states.json seed data for all tax sale states"
 
 ### Task 4: Final verification
 
-- [ ] **Step 9: Run full test suite**
+- [x] **Step 9: Run full test suite**
 
 Run: `uv run pytest -v`
 Expected: ALL PASS (both existing tests and new seed tests)
 
-- [ ] **Step 10: Verify seed loader works with new data**
+- [x] **Step 10: Verify seed loader works with new data**
 
 Run a quick Python check:
 ```bash
@@ -193,7 +193,7 @@ print(f'Validated {len(data)} states successfully')
 "
 ```
 
-- [ ] **Step 11: Commit any fixes if needed, then final commit**
+- [x] **Step 11: Commit any fixes if needed, then final commit**
 
 ```bash
 git add tests/test_seed_states.py src/tdc_auction_calendar/db/seed/states.json

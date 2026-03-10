@@ -25,7 +25,7 @@ Populate `src/tdc_auction_calendar/db/seed/states.json` with statutory auction m
   "redemption_period_months": 24,
   "public_notice_url": null,
   "state_agency_url": null,
-  "governing_statute": "Fla. Stat. § 197"
+  "governing_statute": "Fla. Stat. Ch. 197"
 }
 ```
 
@@ -33,7 +33,7 @@ Populate `src/tdc_auction_calendar/db/seed/states.json` with statutory auction m
 
 - `sale_type`: one of `lien`, `deed`, `hybrid` (existing `SaleType` enum)
 - `typical_months`: integer months when auctions typically occur
-- `redemption_period_months`: null for deed states (no redemption period)
+- `redemption_period_months`: typically null for deed states, but some deed states (e.g., TX) have statutory redemption periods
 - `public_notice_url` / `state_agency_url`: populated where known, null otherwise
 - `governing_statute`: reference to relevant state statute chapter/title
 
