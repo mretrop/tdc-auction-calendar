@@ -31,7 +31,7 @@ uv run alembic revision --autogenerate -m "description"  # Generate new migratio
 - **db/**: Database layer
   - `database.py`: Engine/session factory, reads `DATABASE_URL` env var (default: `sqlite:///data/auction_calendar.db`)
   - `seed_loader.py`: Idempotent JSON seed loader, reads from `db/seed/` directory
-  - `seed/`: JSON seed files (states.json, counties.json)
+  - `seed/`: JSON seed files (states.json, counties.json, vendor_mapping.json)
 - **cli.py**: Typer CLI entry point with `--verbose/-v` flag
 - **log_config.py**: structlog configured for JSON output
 - **alembic/**: Migration scripts, `env.py` uses `get_database_url()` from db/database.py
@@ -65,4 +65,4 @@ uv run alembic revision --autogenerate -m "description"  # Generate new migratio
 
 ## Progress
 
-Issues are tracked as GitHub issues organized by milestones (M1–M4). Issues #1–5 are complete. Next up: issue #6.
+Issues are tracked as GitHub issues organized by milestones (M1–M4). Issues #1–6 are complete. Next up: issue #7.

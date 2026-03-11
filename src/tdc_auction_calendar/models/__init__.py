@@ -6,6 +6,7 @@ from tdc_auction_calendar.models.enums import (
     Priority,
     SaleType,
     SourceType,
+    Vendor,
 )
 from tdc_auction_calendar.models.jurisdiction import (
     Base,
@@ -14,8 +15,14 @@ from tdc_auction_calendar.models.jurisdiction import (
     StateRules,
     StateRulesRow,
 )
+from tdc_auction_calendar.models.vendor import (
+    ALLOWED_VENDORS,
+    VendorMapping,
+    VendorMappingRow,
+)
 
 __all__ = [
+    "ALLOWED_VENDORS",
     "Auction",
     "AuctionRow",
     "AuctionStatus",
@@ -27,4 +34,7 @@ __all__ = [
     "SourceType",
     "StateRules",
     "StateRulesRow",
+    "Vendor",
+    "VendorMapping",
+    "VendorMappingRow",
 ]

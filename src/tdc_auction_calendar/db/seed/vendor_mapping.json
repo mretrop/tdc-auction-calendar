@@ -1,0 +1,422 @@
+[
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Miami-Dade",
+    "portal_url": "https://miamidade.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Broward",
+    "portal_url": "https://broward.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Palm Beach",
+    "portal_url": "https://palmbeach.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Hillsborough",
+    "portal_url": "https://hillsborough.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Orange",
+    "portal_url": "https://orange.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Duval",
+    "portal_url": "https://duval.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Pinellas",
+    "portal_url": "https://pinellas.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Lee",
+    "portal_url": "https://lee.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Polk",
+    "portal_url": "https://polk.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Brevard",
+    "portal_url": "https://brevard.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Volusia",
+    "portal_url": "https://volusia.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Seminole",
+    "portal_url": "https://seminole.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Sarasota",
+    "portal_url": "https://sarasota.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Pasco",
+    "portal_url": "https://pasco.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Manatee",
+    "portal_url": "https://manatee.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Collier",
+    "portal_url": "https://collier.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Escambia",
+    "portal_url": "https://escambia.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Leon",
+    "portal_url": "https://leon.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Osceola",
+    "portal_url": "https://osceola.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Marion",
+    "portal_url": "https://marion.realforeclose.com"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "TX",
+    "county": "Harris",
+    "portal_url": "https://www.bid4assets.com/auction/harris-county-tx"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "TX",
+    "county": "Dallas",
+    "portal_url": "https://www.bid4assets.com/auction/dallas-county-tx"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "TX",
+    "county": "Bexar",
+    "portal_url": "https://www.bid4assets.com/auction/bexar-county-tx"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "TX",
+    "county": "Tarrant",
+    "portal_url": "https://www.bid4assets.com/auction/tarrant-county-tx"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "TX",
+    "county": "Travis",
+    "portal_url": "https://www.bid4assets.com/auction/travis-county-tx"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "MD",
+    "county": "Baltimore County",
+    "portal_url": "https://www.bid4assets.com/auction/baltimore-county-md"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "MD",
+    "county": "Prince George's",
+    "portal_url": "https://www.bid4assets.com/auction/prince-georges-county-md"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "NJ",
+    "county": "Atlantic",
+    "portal_url": "https://www.bid4assets.com/auction/atlantic-county-nj"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "NJ",
+    "county": "Camden",
+    "portal_url": "https://www.bid4assets.com/auction/camden-county-nj"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "NJ",
+    "county": "Essex",
+    "portal_url": "https://www.bid4assets.com/auction/essex-county-nj"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "PA",
+    "county": "Philadelphia",
+    "portal_url": "https://www.bid4assets.com/auction/philadelphia-pa"
+  },
+  {
+    "vendor": "Bid4Assets",
+    "vendor_url": "https://www.bid4assets.com",
+    "state": "NY",
+    "county": "Suffolk",
+    "portal_url": "https://www.bid4assets.com/auction/suffolk-county-ny"
+  },
+  {
+    "vendor": "GovEase",
+    "vendor_url": "https://www.govease.com",
+    "state": "IN",
+    "county": "Lake",
+    "portal_url": "https://liveauctions.govease.com/in/lake"
+  },
+  {
+    "vendor": "GovEase",
+    "vendor_url": "https://www.govease.com",
+    "state": "IN",
+    "county": "Marion",
+    "portal_url": "https://liveauctions.govease.com/in/marion"
+  },
+  {
+    "vendor": "GovEase",
+    "vendor_url": "https://www.govease.com",
+    "state": "AL",
+    "county": "Jefferson",
+    "portal_url": "https://liveauctions.govease.com/al/jefferson"
+  },
+  {
+    "vendor": "GovEase",
+    "vendor_url": "https://www.govease.com",
+    "state": "AL",
+    "county": "Mobile",
+    "portal_url": "https://liveauctions.govease.com/al/mobile"
+  },
+  {
+    "vendor": "GovEase",
+    "vendor_url": "https://www.govease.com",
+    "state": "IL",
+    "county": "Cook",
+    "portal_url": "https://liveauctions.govease.com/il/cook"
+  },
+  {
+    "vendor": "GovEase",
+    "vendor_url": "https://www.govease.com",
+    "state": "SC",
+    "county": "Charleston",
+    "portal_url": "https://liveauctions.govease.com/sc/charleston"
+  },
+  {
+    "vendor": "GovEase",
+    "vendor_url": "https://www.govease.com",
+    "state": "SC",
+    "county": "Greenville",
+    "portal_url": "https://liveauctions.govease.com/sc/greenville"
+  },
+  {
+    "vendor": "GovEase",
+    "vendor_url": "https://www.govease.com",
+    "state": "GA",
+    "county": "Fulton",
+    "portal_url": "https://liveauctions.govease.com/ga/fulton"
+  },
+  {
+    "vendor": "GovEase",
+    "vendor_url": "https://www.govease.com",
+    "state": "GA",
+    "county": "DeKalb",
+    "portal_url": "https://liveauctions.govease.com/ga/dekalb"
+  },
+  {
+    "vendor": "GovEase",
+    "vendor_url": "https://www.govease.com",
+    "state": "NC",
+    "county": "Mecklenburg",
+    "portal_url": "https://liveauctions.govease.com/nc/mecklenburg"
+  },
+  {
+    "vendor": "Grant Street",
+    "vendor_url": "https://www.grantstreet.com",
+    "state": "PA",
+    "county": "Allegheny",
+    "portal_url": "https://auctions.grantstreet.com/allegheny-county-pa"
+  },
+  {
+    "vendor": "Grant Street",
+    "vendor_url": "https://www.grantstreet.com",
+    "state": "NJ",
+    "county": "Bergen",
+    "portal_url": "https://auctions.grantstreet.com/bergen-county-nj"
+  },
+  {
+    "vendor": "Grant Street",
+    "vendor_url": "https://www.grantstreet.com",
+    "state": "NJ",
+    "county": "Hudson",
+    "portal_url": "https://auctions.grantstreet.com/hudson-county-nj"
+  },
+  {
+    "vendor": "Grant Street",
+    "vendor_url": "https://www.grantstreet.com",
+    "state": "NJ",
+    "county": "Monmouth",
+    "portal_url": "https://auctions.grantstreet.com/monmouth-county-nj"
+  },
+  {
+    "vendor": "Grant Street",
+    "vendor_url": "https://www.grantstreet.com",
+    "state": "NJ",
+    "county": "Morris",
+    "portal_url": "https://auctions.grantstreet.com/morris-county-nj"
+  },
+  {
+    "vendor": "Grant Street",
+    "vendor_url": "https://www.grantstreet.com",
+    "state": "OH",
+    "county": "Cuyahoga",
+    "portal_url": "https://auctions.grantstreet.com/cuyahoga-county-oh"
+  },
+  {
+    "vendor": "Grant Street",
+    "vendor_url": "https://www.grantstreet.com",
+    "state": "OH",
+    "county": "Franklin",
+    "portal_url": "https://auctions.grantstreet.com/franklin-county-oh"
+  },
+  {
+    "vendor": "Grant Street",
+    "vendor_url": "https://www.grantstreet.com",
+    "state": "OH",
+    "county": "Hamilton",
+    "portal_url": "https://auctions.grantstreet.com/hamilton-county-oh"
+  },
+  {
+    "vendor": "Grant Street",
+    "vendor_url": "https://www.grantstreet.com",
+    "state": "NJ",
+    "county": "Middlesex",
+    "portal_url": "https://auctions.grantstreet.com/middlesex-county-nj"
+  },
+  {
+    "vendor": "Grant Street",
+    "vendor_url": "https://www.grantstreet.com",
+    "state": "NJ",
+    "county": "Union",
+    "portal_url": "https://auctions.grantstreet.com/union-county-nj"
+  },
+  {
+    "vendor": "SRI",
+    "vendor_url": "https://www.sriservices.com",
+    "state": "TX",
+    "county": "all",
+    "portal_url": "https://www.zeusauction.com"
+  },
+  {
+    "vendor": "SRI",
+    "vendor_url": "https://www.sriservices.com",
+    "state": "GA",
+    "county": "Cobb",
+    "portal_url": "https://www.zeusauction.com"
+  },
+  {
+    "vendor": "SRI",
+    "vendor_url": "https://www.sriservices.com",
+    "state": "GA",
+    "county": "Gwinnett",
+    "portal_url": "https://www.zeusauction.com"
+  },
+  {
+    "vendor": "SRI",
+    "vendor_url": "https://www.sriservices.com",
+    "state": "TN",
+    "county": "Davidson",
+    "portal_url": "https://www.zeusauction.com"
+  },
+  {
+    "vendor": "SRI",
+    "vendor_url": "https://www.sriservices.com",
+    "state": "TN",
+    "county": "Shelby",
+    "portal_url": "https://www.zeusauction.com"
+  },
+  {
+    "vendor": "SRI",
+    "vendor_url": "https://www.sriservices.com",
+    "state": "LA",
+    "county": "East Baton Rouge",
+    "portal_url": "https://www.zeusauction.com"
+  },
+  {
+    "vendor": "SRI",
+    "vendor_url": "https://www.sriservices.com",
+    "state": "LA",
+    "county": "Orleans",
+    "portal_url": "https://www.zeusauction.com"
+  },
+  {
+    "vendor": "SRI",
+    "vendor_url": "https://www.sriservices.com",
+    "state": "VA",
+    "county": "Fairfax",
+    "portal_url": "https://www.zeusauction.com"
+  }
+]

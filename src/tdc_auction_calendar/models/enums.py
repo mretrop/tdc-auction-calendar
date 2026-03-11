@@ -27,3 +27,11 @@ class Priority(StrEnum):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
+
+
+class Vendor(StrEnum):
+    REALAUCTION = "RealAuction"
+    BID4ASSETS = "Bid4Assets"
+    GOVEASE = "GovEase"
+    GRANT_STREET = "Grant Street"
+    SRI = "SRI"
