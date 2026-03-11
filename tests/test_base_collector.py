@@ -31,7 +31,15 @@ def _make_auction(
 class ConcreteCollector(BaseCollector):
     """Minimal concrete subclass for testing."""
 
-    async def collect(self) -> list[Auction]:
+    @property
+    def name(self) -> str:
+        return "test-collector"
+
+    @property
+    def source_type(self) -> SourceType:
+        return SourceType.STATUTORY
+
+    async def _fetch(self) -> list[Auction]:
         return []
 
     def normalize(self, raw: dict) -> Auction:
@@ -48,6 +56,42 @@ def test_concrete_subclass_instantiates():
     """A concrete subclass implementing all abstract methods can be created."""
     collector = ConcreteCollector()
     assert isinstance(collector, BaseCollector)
+    assert collector.name == "test-collector"
+    assert collector.source_type == SourceType.STATUTORY
+
+
+@pytest.mark.asyncio
+async def test_collect_is_awaitable():
+    """collect() returns a coroutine that can be awaited."""
+    collector = ConcreteCollector()
+    result = await collector.collect()
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_collect_auto_deduplicates():
+    """collect() applies deduplication automatically via template method."""
+
+    class DuplicatingCollector(ConcreteCollector):
+        async def _fetch(self) -> list[Auction]:
+            return [
+                _make_auction(confidence=0.4),
+                _make_auction(confidence=0.8),
+            ]
+
+    collector = DuplicatingCollector()
+    result = await collector.collect()
+    assert len(result) == 1
+    assert result[0].confidence_score == 0.8
+
+
+def test_normalize_returns_auction():
+    """normalize() converts a raw dict into a validated Auction."""
+    collector = ConcreteCollector()
+    result = collector.normalize({"state": "TX", "county": "Harris"})
+    assert isinstance(result, Auction)
+    assert result.state == "TX"
+    assert result.county == "Harris"
 
 
 def test_deduplicate_no_duplicates():

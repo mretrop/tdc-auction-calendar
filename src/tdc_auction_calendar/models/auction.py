@@ -46,6 +46,9 @@ class AuctionRow(Base):
     )
 
 
+DeduplicationKey = tuple[str, str, datetime.date, SaleType]
+
+
 class Auction(BaseModel):
     """Pydantic model for auction validation."""
 
@@ -68,6 +71,6 @@ class Auction(BaseModel):
     notes: str | None = None
 
     @property
-    def dedup_key(self) -> tuple[str, str, datetime.date, SaleType]:
+    def dedup_key(self) -> DeduplicationKey:
         """Natural key for deduplication: (state, county, start_date, sale_type)."""
         return (self.state, self.county, self.start_date, self.sale_type)

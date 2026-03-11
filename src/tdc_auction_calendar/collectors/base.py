@@ -6,7 +6,8 @@ from abc import ABC, abstractmethod
 
 import structlog
 
-from tdc_auction_calendar.models.auction import Auction
+from tdc_auction_calendar.models.auction import Auction, DeduplicationKey
+from tdc_auction_calendar.models.enums import SourceType
 
 logger = structlog.get_logger()
 
@@ -14,13 +15,34 @@ logger = structlog.get_logger()
 class BaseCollector(ABC):
     """Base class for auction data collectors.
 
-    Subclasses must implement ``collect`` and ``normalize``.
-    The ``deduplicate`` method is provided as a concrete utility.
+    Subclasses must implement ``name``, ``source_type``, ``_fetch``,
+    and ``normalize``. The ``collect`` method calls ``_fetch`` and then
+    deduplicates the results automatically.
     """
 
+    @property
     @abstractmethod
+    def name(self) -> str:
+        """Human-readable collector name."""
+        ...
+
+    @property
+    @abstractmethod
+    def source_type(self) -> SourceType:
+        """The source type for auctions produced by this collector."""
+        ...
+
     async def collect(self) -> list[Auction]:
-        """Collect auction records from a data source."""
+        """Collect and deduplicate auction records.
+
+        Calls ``_fetch`` then applies deduplication automatically.
+        """
+        raw = await self._fetch()
+        return self.deduplicate(raw)
+
+    @abstractmethod
+    async def _fetch(self) -> list[Auction]:
+        """Fetch auction records from the data source (before dedup)."""
         ...
 
     @abstractmethod
@@ -34,7 +56,7 @@ class BaseCollector(ABC):
         Dedup key: (state, county, start_date, sale_type).
         On equal confidence, the first encountered auction wins.
         """
-        best: dict[tuple, Auction] = {}
+        best: dict[DeduplicationKey, Auction] = {}
         for auction in auctions:
             key = auction.dedup_key
             existing = best.get(key)
@@ -43,6 +65,11 @@ class BaseCollector(ABC):
 
         dropped = len(auctions) - len(best)
         if dropped:
-            logger.info("deduplicated_auctions", kept=len(best), dropped=dropped)
+            logger.info(
+                "deduplicated_auctions",
+                collector=self.name,
+                kept=len(best),
+                dropped=dropped,
+            )
 
         return list(best.values())
