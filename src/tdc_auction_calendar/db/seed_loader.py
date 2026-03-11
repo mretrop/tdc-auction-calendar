@@ -9,6 +9,7 @@ import structlog
 from sqlalchemy.orm import Session
 
 from tdc_auction_calendar.models.jurisdiction import CountyInfoRow, StateRulesRow
+from tdc_auction_calendar.models.vendor import VendorMappingRow
 
 SEED_DIR = Path(__file__).parent / "seed"
 
@@ -18,6 +19,7 @@ logger = structlog.get_logger()
 _SEED_MAP: dict[str, tuple[type, list[str]]] = {
     "states": (StateRulesRow, ["state"]),
     "counties": (CountyInfoRow, ["fips_code"]),
+    "vendor_mapping": (VendorMappingRow, ["vendor", "state", "county"]),
 }
 
 
