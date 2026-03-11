@@ -4,6 +4,7 @@ import json
 import re
 
 import pytest
+from pydantic import ValidationError
 
 from tdc_auction_calendar.db.seed_loader import SEED_DIR
 from tdc_auction_calendar.models.vendor import ALLOWED_VENDORS, VendorMapping, VendorMappingRow
@@ -148,3 +149,39 @@ def test_counties_vendor_cross_validation(seed_data, counties_data):
     assert not missing, (
         f"Vendors in counties.json but not in vendor_mapping.json: {missing}"
     )
+
+
+# --- Negative validation tests ---
+
+_VALID_KWARGS = {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Duval",
+    "portal_url": "https://duval.realforeclose.com",
+}
+
+
+def test_rejects_unknown_vendor():
+    with pytest.raises(ValidationError):
+        VendorMapping(**{**_VALID_KWARGS, "vendor": "UnknownCo"})
+
+
+def test_rejects_invalid_vendor_url():
+    with pytest.raises(ValidationError):
+        VendorMapping(**{**_VALID_KWARGS, "vendor_url": "not-a-url"})
+
+
+def test_rejects_invalid_portal_url():
+    with pytest.raises(ValidationError):
+        VendorMapping(**{**_VALID_KWARGS, "portal_url": "ftp://example.com"})
+
+
+def test_rejects_state_too_long():
+    with pytest.raises(ValidationError):
+        VendorMapping(**{**_VALID_KWARGS, "state": "FLA"})
+
+
+def test_rejects_empty_county():
+    with pytest.raises(ValidationError):
+        VendorMapping(**{**_VALID_KWARGS, "county": ""})

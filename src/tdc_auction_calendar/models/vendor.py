@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import sqlalchemy as sa
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Mapped, mapped_column
 
+from tdc_auction_calendar.models.enums import Vendor
 from tdc_auction_calendar.models.jurisdiction import Base
 
-
-ALLOWED_VENDORS = frozenset({"RealAuction", "Bid4Assets", "GovEase", "Grant Street", "SRI"})
+ALLOWED_VENDORS = frozenset(Vendor)
 
 
 # --- SQLAlchemy ORM model ---
@@ -29,15 +29,8 @@ class VendorMappingRow(Base):
 
 
 class VendorMapping(BaseModel):
-    vendor: str
-    vendor_url: str = Field(pattern=r"^https?://")
+    vendor: Vendor
+    vendor_url: str = Field(pattern=r"^https?://\S+$")
     state: str = Field(min_length=2, max_length=2)
     county: str = Field(min_length=1)
-    portal_url: str = Field(pattern=r"^https?://")
-
-    @field_validator("vendor")
-    @classmethod
-    def vendor_must_be_allowed(cls, v: str) -> str:
-        if v not in ALLOWED_VENDORS:
-            raise ValueError(f"Unknown vendor '{v}', must be one of {ALLOWED_VENDORS}")
-        return v
+    portal_url: str = Field(pattern=r"^https?://\S+$")
