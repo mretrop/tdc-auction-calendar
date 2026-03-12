@@ -8,6 +8,7 @@ import os
 import httpx
 import structlog
 
+from tdc_auction_calendar.collectors.scraping.client import PermanentFetchError
 from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
 
 logger = structlog.get_logger()
@@ -56,11 +57,19 @@ class CloudflareFetcher:
                 "limit": 1,
             },
         )
-        if resp.status_code >= 400:
-            raise CloudflareFetchError(
-                f"Cloudflare API error {resp.status_code} on job creation"
+        if 400 <= resp.status_code < 500:
+            raise PermanentFetchError(
+                resp.status_code,
+                f"Cloudflare API client error on job creation",
             )
-        job_id = resp.json()["id"]
+        if resp.status_code >= 500:
+            raise CloudflareFetchError(
+                f"Cloudflare API server error {resp.status_code} on job creation"
+            )
+        body = resp.json()
+        if "id" not in body:
+            raise CloudflareFetchError(f"Cloudflare API response missing 'id': {body}")
+        job_id = body["id"]
 
         # Poll for completion
         elapsed = 0.0
@@ -69,17 +78,31 @@ class CloudflareFetcher:
             elapsed += _POLL_INTERVAL
 
             poll_resp = await self._http.get(f"{self._crawl_url}/{job_id}")
-            if poll_resp.status_code >= 400:
+            if 400 <= poll_resp.status_code < 500:
+                raise PermanentFetchError(
+                    poll_resp.status_code,
+                    f"Cloudflare API client error polling job {job_id}",
+                )
+            if poll_resp.status_code >= 500:
                 raise CloudflareFetchError(
-                    f"Cloudflare API error {poll_resp.status_code} polling job {job_id}"
+                    f"Cloudflare API server error {poll_resp.status_code} polling job {job_id}"
                 )
             data = poll_resp.json()
-            status = data["status"]
+            status = data.get("status")
+            if status is None:
+                raise CloudflareFetchError(
+                    f"Cloudflare API response missing 'status': {data}"
+                )
 
             if status == "running":
                 continue
             if status == "completed":
-                page = data["result"][0]
+                results = data.get("result") or []
+                if not results:
+                    raise CloudflareFetchError(
+                        f"Cloudflare job {job_id} completed but returned no results"
+                    )
+                page = results[0]
                 status_code = page.get("metadata", {}).get("statusCode", 200)
                 return FetchResult(
                     url=url,

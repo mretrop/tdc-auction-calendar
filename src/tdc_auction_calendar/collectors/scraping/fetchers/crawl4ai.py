@@ -22,8 +22,9 @@ class Crawl4AiFetcher:
         if self._crawler is None:
             from crawl4ai import AsyncWebCrawler
 
-            self._crawler = AsyncWebCrawler()
-            await self._crawler.__aenter__()
+            crawler = AsyncWebCrawler()
+            await crawler.__aenter__()
+            self._crawler = crawler
         return self._crawler
 
     async def fetch(self, url: str, *, render_js: bool = True) -> FetchResult:

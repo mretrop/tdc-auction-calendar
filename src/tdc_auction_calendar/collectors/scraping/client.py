@@ -9,11 +9,15 @@ from types import TracebackType
 from typing import Any
 from urllib.parse import urlparse
 
+import httpx
 import structlog
 from pydantic import BaseModel
 
 from tdc_auction_calendar.collectors.scraping.cache import ResponseCache
-from tdc_auction_calendar.collectors.scraping.extraction import LLMExtraction
+from tdc_auction_calendar.collectors.scraping.extraction import (
+    ExtractionStrategy,
+    LLMExtraction,
+)
 from tdc_auction_calendar.collectors.scraping.fetchers.protocol import (
     FetchResult,
     PageFetcher,
@@ -31,6 +35,10 @@ class PermanentFetchError(Exception):
         super().__init__(f"Permanent error {status_code}: {message}")
 
 
+class ExtractionError(Exception):
+    """Raised when data extraction fails after a successful fetch."""
+
+
 class ScrapeError(Exception):
     """Raised when all fetchers fail after retries."""
 
@@ -43,11 +51,11 @@ class ScrapeError(Exception):
 class ScrapeResult(BaseModel):
     """Result of a scrape operation."""
 
-    fetch: FetchResult
-    data: Any = None
-    from_cache: bool = False
+    model_config = {"frozen": True, "arbitrary_types_allowed": True}
 
-    model_config = {"arbitrary_types_allowed": True}
+    fetch: FetchResult
+    data: list[dict] | dict | BaseModel | None = None
+    from_cache: bool = False
 
 
 class ScrapeClient:
@@ -62,6 +70,10 @@ class ScrapeClient:
         max_retries: int = 3,
         retry_base_delay: float = 1.0,
     ) -> None:
+        if max_retries < 1:
+            raise ValueError(f"max_retries must be >= 1, got {max_retries}")
+        if retry_base_delay <= 0:
+            raise ValueError(f"retry_base_delay must be > 0, got {retry_base_delay}")
         self._primary = primary
         self._fallback = fallback
         self._rate_limiter = rate_limiter or RateLimiter()
@@ -83,15 +95,23 @@ class ScrapeClient:
     async def close(self) -> None:
         """Close fetcher resources."""
         for fetcher in (self._primary, self._fallback):
-            if fetcher is not None and hasattr(fetcher, "close"):
+            if fetcher is None:
+                continue
+            try:
                 await fetcher.close()
+            except Exception as exc:
+                logger.warning(
+                    "fetcher_close_error",
+                    fetcher=type(fetcher).__name__,
+                    error=str(exc),
+                )
 
     async def scrape(
         self,
         url: str,
         *,
         render_js: bool = True,
-        extraction: Any | None = None,
+        extraction: ExtractionStrategy | None = None,
         schema: type[BaseModel] | None = None,
     ) -> ScrapeResult:
         """Fetch a URL, cache the result, and optionally extract structured data."""
@@ -177,7 +197,7 @@ class ScrapeClient:
                     status_code=exc.status_code,
                 )
                 return None
-            except Exception as exc:
+            except (OSError, httpx.HTTPError, asyncio.TimeoutError, RuntimeError) as exc:
                 attempts.append({
                     "fetcher": fetcher_name,
                     "attempt": attempt + 1,
@@ -200,15 +220,50 @@ class ScrapeClient:
     async def _run_extraction(
         self,
         fetch_result: FetchResult,
-        extraction: Any | None,
+        extraction: ExtractionStrategy | None,
         schema: type[BaseModel] | None,
-    ) -> Any:
+    ) -> BaseModel | dict | list[dict] | None:
         """Run extraction on fetched content."""
         if extraction is None and schema is not None:
             extraction = LLMExtraction()
 
-        content = fetch_result.markdown or fetch_result.html or ""
-        return await extraction.extract(content, schema=schema)
+        content = fetch_result.markdown or fetch_result.html
+        if not content:
+            logger.warning(
+                "extraction_skipped_no_content",
+                url=fetch_result.url,
+                fetcher=fetch_result.fetcher,
+            )
+            return None
+
+        try:
+            return await extraction.extract(content, schema=schema)
+        except Exception as exc:
+            logger.error(
+                "extraction_failed",
+                url=fetch_result.url,
+                extraction_type=type(extraction).__name__,
+                error=str(exc),
+            )
+            raise ExtractionError(
+                f"Extraction failed for {fetch_result.url}: {exc}"
+            ) from exc
+
+
+def _env_int(name: str, default: str) -> int:
+    raw = os.environ.get(name, default)
+    try:
+        return int(raw)
+    except ValueError:
+        raise ValueError(f"Environment variable {name} must be an integer, got: {raw!r}")
+
+
+def _env_float(name: str, default: str) -> float:
+    raw = os.environ.get(name, default)
+    try:
+        return float(raw)
+    except ValueError:
+        raise ValueError(f"Environment variable {name} must be a number, got: {raw!r}")
 
 
 def create_scrape_client(
@@ -229,10 +284,10 @@ def create_scrape_client(
     )
 
     _cache_dir = cache_dir if cache_dir is not None else os.environ.get("SCRAPE_CACHE_DIR", "data/cache")
-    _cache_ttl = cache_ttl if cache_ttl is not None else int(os.environ.get("SCRAPE_CACHE_TTL", "21600"))
-    _rate_default = rate_limit_default if rate_limit_default is not None else float(os.environ.get("SCRAPE_RATE_LIMIT_DEFAULT", "2.0"))
-    _max_retries = max_retries if max_retries is not None else int(os.environ.get("SCRAPE_RETRY_MAX", "3"))
-    _retry_delay = retry_base_delay if retry_base_delay is not None else float(os.environ.get("SCRAPE_RETRY_BASE_DELAY", "1.0"))
+    _cache_ttl = cache_ttl if cache_ttl is not None else _env_int("SCRAPE_CACHE_TTL", "21600")
+    _rate_default = rate_limit_default if rate_limit_default is not None else _env_float("SCRAPE_RATE_LIMIT_DEFAULT", "2.0")
+    _max_retries = max_retries if max_retries is not None else _env_int("SCRAPE_RETRY_MAX", "3")
+    _retry_delay = retry_base_delay if retry_base_delay is not None else _env_float("SCRAPE_RETRY_BASE_DELAY", "1.0")
 
     cache = ResponseCache(cache_dir=_cache_dir, ttl=_cache_ttl)
     limiter = RateLimiter(default_delay=_rate_default)

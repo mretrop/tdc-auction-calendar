@@ -71,6 +71,18 @@ async def test_llm_extraction_requires_schema():
         await extractor.extract("content")
 
 
+async def test_llm_extraction_no_tool_use_block():
+    """LLMExtraction raises RuntimeError when Claude returns no tool_use block."""
+    mock_client = AsyncMock()
+    mock_client.messages.create.return_value = MagicMock(
+        content=[MagicMock(type="text", text="I couldn't extract the data")]
+    )
+
+    extractor = LLMExtraction(client=mock_client)
+    with pytest.raises(RuntimeError, match="No tool_use block"):
+        await extractor.extract("some content", schema=AuctionInfo)
+
+
 # --- CSSExtraction tests ---
 
 SAMPLE_HTML = """

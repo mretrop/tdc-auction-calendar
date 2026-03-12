@@ -38,23 +38,31 @@ class ResponseCache:
             logger.debug("cache_miss", url=url, reason="not_found")
             return None
 
-        data = json.loads(path.read_text())
-        if time.time() > data["expires_at"]:
-            logger.debug("cache_miss", url=url, reason="expired")
-            path.unlink()
-            return None
+        try:
+            data = json.loads(path.read_text())
+            if time.time() >= data["expires_at"]:
+                logger.debug("cache_miss", url=url, reason="expired")
+                path.unlink(missing_ok=True)
+                return None
 
-        logger.debug("cache_hit", url=url)
-        return FetchResult.model_validate(data["result"])
+            logger.debug("cache_hit", url=url)
+            return FetchResult.model_validate(data["result"])
+        except (json.JSONDecodeError, KeyError, ValueError) as exc:
+            logger.warning("cache_corrupted", url=url, path=str(path), error=str(exc))
+            path.unlink(missing_ok=True)
+            return None
 
     async def put(self, url: str, render_js: bool, result: FetchResult) -> None:
         """Write FetchResult to cache with expiry metadata."""
         key = self._cache_key(url, render_js)
         path = self._cache_path(key)
 
-        data = {
-            "expires_at": time.time() + self._ttl,
-            "result": result.model_dump(),
-        }
-        path.write_text(json.dumps(data))
-        logger.debug("cache_write", url=url, ttl=self._ttl)
+        try:
+            data = {
+                "expires_at": time.time() + self._ttl,
+                "result": result.model_dump(),
+            }
+            path.write_text(json.dumps(data))
+            logger.debug("cache_write", url=url, ttl=self._ttl)
+        except OSError as exc:
+            logger.warning("cache_write_failed", url=url, path=str(path), error=str(exc))

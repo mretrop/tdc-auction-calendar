@@ -14,6 +14,8 @@ class RateLimiter:
         default_delay: float = 2.0,
         per_domain: dict[str, float] | None = None,
     ) -> None:
+        if default_delay < 0:
+            raise ValueError(f"default_delay must be >= 0, got {default_delay}")
         self._default_delay = default_delay
         self._per_domain = per_domain or {}
         self._last_request: dict[str, float] = {}

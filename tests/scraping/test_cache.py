@@ -55,3 +55,30 @@ async def test_cache_expired_returns_none(tmp_path, sample_result):
     # TTL=0 means already expired
     cached = await cache.get("https://example.com", render_js=True)
     assert cached is None
+
+
+async def test_cache_corrupted_json_returns_none(tmp_path):
+    """Corrupted cache file returns None instead of crashing."""
+    cache = ResponseCache(cache_dir=str(tmp_path), ttl=3600)
+    # Write corrupt data directly to the cache file
+    import hashlib
+    key = hashlib.sha256("https://example.com:True".encode()).hexdigest()
+    path = tmp_path / f"{key}.json"
+    path.write_text("not valid json {{{")
+
+    result = await cache.get("https://example.com", render_js=True)
+    assert result is None
+    # Corrupted file should be cleaned up
+    assert not path.exists()
+
+
+async def test_cache_missing_keys_returns_none(tmp_path):
+    """Cache file with missing keys returns None instead of crashing."""
+    cache = ResponseCache(cache_dir=str(tmp_path), ttl=3600)
+    import hashlib
+    key = hashlib.sha256("https://example.com:True".encode()).hexdigest()
+    path = tmp_path / f"{key}.json"
+    path.write_text('{"wrong_key": 123}')
+
+    result = await cache.get("https://example.com", render_js=True)
+    assert result is None

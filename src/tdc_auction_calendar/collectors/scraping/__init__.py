@@ -12,6 +12,7 @@ Public API:
 """
 
 from tdc_auction_calendar.collectors.scraping.client import (
+    ExtractionError,
     PermanentFetchError,
     ScrapeClient,
     ScrapeError,
@@ -26,6 +27,7 @@ from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResu
 
 __all__ = [
     "CSSExtraction",
+    "ExtractionError",
     "FetchResult",
     "LLMExtraction",
     "PermanentFetchError",
