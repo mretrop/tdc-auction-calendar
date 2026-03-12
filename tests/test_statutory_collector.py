@@ -111,7 +111,6 @@ class TestCollect:
         collector = StatutoryCollector()
         auctions = await collector.collect()
         years = {a.start_date.year for a in auctions}
-        import datetime
         current_year = datetime.date.today().year
         assert current_year in years
         assert current_year + 1 in years
