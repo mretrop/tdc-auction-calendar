@@ -47,19 +47,29 @@ class CloudflareFetcher:
     def _crawl_url(self) -> str:
         return f"{_BASE_URL}/{self._account_id}/browser-rendering/crawl"
 
-    async def fetch(self, url: str, *, render_js: bool = True) -> FetchResult:
+    @staticmethod
+    def _build_post_body(url: str, render_js: bool, json_options: dict | None) -> dict:
+        body: dict = {
+            "url": url,
+            "formats": ["markdown", "html"],
+            "render": render_js,
+            "limit": 1,
+        }
+        if json_options is not None:
+            body["formats"].append("json")
+            body["jsonOptions"] = json_options
+        return body
+
+    async def fetch(
+        self, url: str, *, render_js: bool = True, json_options: dict | None = None
+    ) -> FetchResult:
         """Submit a crawl job and poll until complete."""
         logger.info("cloudflare_fetch_start", url=url, render_js=render_js)
 
         # POST to create job
         resp = await self._http.post(
             self._crawl_url,
-            json={
-                "url": url,
-                "formats": ["markdown", "html"],
-                "render": render_js,
-                "limit": 1,
-            },
+            json=self._build_post_body(url, render_js, json_options),
         )
         if 400 <= resp.status_code < 500:
             raise PermanentFetchError(
@@ -112,6 +122,7 @@ class CloudflareFetcher:
                     url=url,
                     html=page.get("html"),
                     markdown=page.get("markdown"),
+                    json=page.get("json"),
                     status_code=status_code,
                     fetcher="cloudflare",
                 )
