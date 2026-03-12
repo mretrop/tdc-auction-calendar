@@ -7,13 +7,12 @@ import json
 from datetime import date
 
 import structlog
+from pydantic import ValidationError
 
 from tdc_auction_calendar.collectors.base import BaseCollector
 from tdc_auction_calendar.db.seed_loader import SEED_DIR
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SourceType
-
-from pydantic import ValidationError
 
 logger = structlog.get_logger()
 
@@ -77,6 +76,7 @@ class StatutoryCollector(BaseCollector):
                 continue
             state_rules[s_state] = s
         auctions: list[Auction] = []
+        skipped = 0
 
         for state_code, rules in state_rules.items():
             if state_code in self._skip_states:
@@ -102,6 +102,18 @@ class StatutoryCollector(BaseCollector):
                     continue
 
                 vendor_info = vendor_index.get((state_code, county_name))
+                vendor_name = None
+                portal_url = None
+                if vendor_info:
+                    vendor_name = vendor_info.get("vendor")
+                    if not vendor_name:
+                        logger.warning(
+                            "statutory_vendor_missing_name",
+                            state=state_code,
+                            county=county_name,
+                        )
+                    else:
+                        portal_url = vendor_info.get("portal_url")
 
                 for month in typical_months:
                     for year in years:
@@ -112,22 +124,16 @@ class StatutoryCollector(BaseCollector):
                             "year": year,
                             "sale_type": sale_type,
                         }
-                        if vendor_info:
-                            vendor_name = vendor_info.get("vendor")
-                            if not vendor_name:
-                                logger.warning(
-                                    "statutory_vendor_missing_name",
-                                    state=state_code,
-                                    county=county_name,
-                                )
-                            else:
-                                raw["vendor"] = vendor_name
-                                raw["portal_url"] = vendor_info.get("portal_url")
+                        if vendor_name:
+                            raw["vendor"] = vendor_name
+                            raw["portal_url"] = portal_url
                         try:
                             auctions.append(self.normalize(raw))
-                        except (ValidationError, ValueError) as exc:
+                        except (ValidationError, ValueError, TypeError, KeyError) as exc:
+                            skipped += 1
                             logger.error(
                                 "statutory_normalize_failed",
+                                error_type=type(exc).__name__,
                                 state=state_code,
                                 county=county_name,
                                 month=month,
@@ -135,10 +141,12 @@ class StatutoryCollector(BaseCollector):
                                 error=str(exc),
                             )
 
-        logger.info(
+        log = logger.warning if skipped else logger.info
+        log(
             "statutory_fetch_complete",
             collector=self.name,
             records=len(auctions),
+            skipped=skipped,
         )
         return auctions
 
