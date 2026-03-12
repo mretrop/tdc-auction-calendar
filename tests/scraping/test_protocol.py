@@ -36,17 +36,17 @@ def test_fetch_result_serializes_to_dict():
 
 
 def test_fetch_result_with_json():
-    """FetchResult accepts optional json field."""
+    """FetchResult accepts optional json_data field."""
     result = FetchResult(
         url="https://example.com",
         status_code=200,
         fetcher="cloudflare",
-        json=[{"county": "Adams", "sale_date": "2026-06-15"}],
+        json_data=[{"county": "Adams", "sale_date": "2026-06-15"}],
     )
-    assert result.json == [{"county": "Adams", "sale_date": "2026-06-15"}]
+    assert result.json_data == [{"county": "Adams", "sale_date": "2026-06-15"}]
 
 
 def test_fetch_result_json_defaults_none():
-    """FetchResult.json defaults to None."""
+    """FetchResult.json_data defaults to None."""
     result = FetchResult(url="https://example.com", status_code=200, fetcher="cloudflare")
-    assert result.json is None
+    assert result.json_data is None

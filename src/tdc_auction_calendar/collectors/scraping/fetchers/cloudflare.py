@@ -122,7 +122,7 @@ class CloudflareFetcher:
                     url=url,
                     html=page.get("html"),
                     markdown=page.get("markdown"),
-                    json=page.get("json"),
+                    json_data=page.get("json"),
                     status_code=status_code,
                     fetcher="cloudflare",
                 )

@@ -121,8 +121,8 @@ class ScrapeClient:
             cached = await self._cache.get(url, render_js)
             if cached is not None:
                 data = None
-                if cached.json is not None:
-                    data = cached.json
+                if cached.json_data is not None:
+                    data = cached.json_data
                 elif extraction is not None or schema is not None:
                     data = await self._run_extraction(cached, extraction, schema)
                 return ScrapeResult(fetch=cached, data=data, from_cache=True)
@@ -140,8 +140,8 @@ class ScrapeClient:
 
         # 7. Extract (skip if server-side JSON already populated)
         data = None
-        if fetch_result.json is not None:
-            data = fetch_result.json
+        if fetch_result.json_data is not None:
+            data = fetch_result.json_data
         elif extraction is not None or schema is not None:
             data = await self._run_extraction(fetch_result, extraction, schema)
 

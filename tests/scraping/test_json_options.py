@@ -5,9 +5,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+from tdc_auction_calendar.collectors.scraping.cache import ResponseCache
+from tdc_auction_calendar.collectors.scraping.client import ScrapeClient, ScrapeResult
 from tdc_auction_calendar.collectors.scraping.fetchers.cloudflare import CloudflareFetcher
 from tdc_auction_calendar.collectors.scraping.fetchers.crawl4ai import Crawl4AiFetcher
 from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
+from tdc_auction_calendar.collectors.scraping.rate_limiter import RateLimiter
 
 
 @pytest.mark.asyncio
@@ -27,7 +30,7 @@ async def test_crawl4ai_accepts_and_ignores_json_options():
     )
 
     assert result.status_code == 200
-    assert result.json is None  # Crawl4AI does not do JSON extraction
+    assert result.json_data is None  # Crawl4AI does not do JSON extraction
 
 
 @pytest.fixture()
@@ -68,7 +71,7 @@ async def test_cloudflare_json_options_in_post_body(cf_fetcher):
     assert body["jsonOptions"] == json_options
 
     # Verify FetchResult has json data
-    assert result.json == [{"county": "Adams"}]
+    assert result.json_data == [{"county": "Adams"}]
 
 
 @pytest.mark.asyncio
@@ -97,14 +100,10 @@ async def test_cloudflare_no_json_options_unchanged(cf_fetcher):
     assert "json" not in body["formats"]
     assert "jsonOptions" not in body
 
-    assert result.json is None
+    assert result.json_data is None
 
 
 # --- ScrapeClient json_options threading tests ---
-
-from tdc_auction_calendar.collectors.scraping.client import ScrapeClient, ScrapeResult
-from tdc_auction_calendar.collectors.scraping.cache import ResponseCache
-from tdc_auction_calendar.collectors.scraping.rate_limiter import RateLimiter
 
 
 def _make_fetcher(fetch_result):
@@ -119,7 +118,7 @@ async def test_scrape_threads_json_options_to_fetcher():
     """json_options is passed through to fetcher.fetch()."""
     result = FetchResult(
         url="https://example.com", status_code=200, fetcher="primary",
-        html="<h1>Data</h1>", json=[{"county": "Adams"}],
+        html="<h1>Data</h1>", json_data=[{"county": "Adams"}],
     )
     fetcher = _make_fetcher(result)
     client = ScrapeClient(primary=fetcher, rate_limiter=RateLimiter(default_delay=0.0))
@@ -135,10 +134,10 @@ async def test_scrape_threads_json_options_to_fetcher():
 
 @pytest.mark.asyncio
 async def test_scrape_skips_extraction_when_json_populated():
-    """When FetchResult.json is populated, extraction is skipped."""
+    """When FetchResult.json_data is populated, extraction is skipped."""
     result = FetchResult(
         url="https://example.com", status_code=200, fetcher="primary",
-        html="<h1>Data</h1>", json=[{"county": "Adams"}],
+        html="<h1>Data</h1>", json_data=[{"county": "Adams"}],
     )
     fetcher = _make_fetcher(result)
     mock_extraction = AsyncMock()
@@ -156,7 +155,7 @@ async def test_scrape_skips_extraction_when_json_populated():
 
 @pytest.mark.asyncio
 async def test_scrape_falls_back_to_extraction_when_json_none():
-    """When FetchResult.json is None, extraction runs normally."""
+    """When FetchResult.json_data is None, extraction runs normally."""
     result = FetchResult(
         url="https://example.com", status_code=200, fetcher="primary",
         html="<h1>Data</h1>", markdown="# Data",
@@ -189,7 +188,7 @@ async def test_scrape_bypasses_cache_when_json_options_provided(tmp_path):
     # Fetcher returns fresh result with json
     fresh_result = FetchResult(
         url="https://example.com", status_code=200, fetcher="primary",
-        html="<h1>New</h1>", json=[{"county": "Adams"}],
+        html="<h1>New</h1>", json_data=[{"county": "Adams"}],
     )
     fetcher = _make_fetcher(fresh_result)
     client = ScrapeClient(
