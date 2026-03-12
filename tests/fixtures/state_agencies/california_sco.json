@@ -1,0 +1,17 @@
+[
+  {"county": "Alameda", "sale_date": "2026-10-15", "auction_type": "deed"},
+  {"county": "Fresno", "sale_date": "2026-10-20", "auction_type": "deed"},
+  {"county": "Kern", "sale_date": "2026-10-22", "auction_type": "deed"},
+  {"county": "Los Angeles", "sale_date": "2026-10-25", "auction_type": "deed"},
+  {"county": "Madera", "sale_date": "2026-10-18", "auction_type": "deed"},
+  {"county": "Marin", "sale_date": "2026-10-20", "auction_type": "deed"},
+  {"county": "Merced", "sale_date": "2026-10-22", "auction_type": "deed"},
+  {"county": "Orange", "sale_date": "2026-10-25", "auction_type": "deed"},
+  {"county": "Riverside", "sale_date": "2026-10-15", "auction_type": "deed"},
+  {"county": "Sacramento", "sale_date": "2026-10-20", "auction_type": "deed"},
+  {"county": "San Bernardino", "sale_date": "2026-10-22", "auction_type": "deed"},
+  {"county": "San Diego", "sale_date": "2026-10-25", "auction_type": "deed"},
+  {"county": "San Francisco", "sale_date": "2026-10-15", "auction_type": "deed"},
+  {"county": "Santa Clara", "sale_date": "2026-10-20", "auction_type": "deed"},
+  {"county": "Ventura", "sale_date": "2026-10-22", "auction_type": "deed"}
+]

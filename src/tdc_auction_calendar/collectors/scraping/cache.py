@@ -47,7 +47,7 @@ class ResponseCache:
 
             logger.debug("cache_hit", url=url)
             return FetchResult.model_validate(data["result"])
-        except (json.JSONDecodeError, KeyError, ValueError) as exc:
+        except (json.JSONDecodeError, KeyError, ValueError, OSError) as exc:
             logger.warning("cache_corrupted", url=url, path=str(path), error=str(exc))
             path.unlink(missing_ok=True)
             return None
@@ -64,5 +64,5 @@ class ResponseCache:
             }
             path.write_text(json.dumps(data))
             logger.debug("cache_write", url=url, ttl=self._ttl)
-        except OSError as exc:
+        except (OSError, TypeError, ValueError) as exc:
             logger.warning("cache_write_failed", url=url, path=str(path), error=str(exc))

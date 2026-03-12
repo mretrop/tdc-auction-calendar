@@ -36,15 +36,30 @@ uv run alembic revision --autogenerate -m "description"  # Generate new migratio
 - **log_config.py**: structlog configured for JSON output
 - **alembic/**: Migration scripts, `env.py` uses `get_database_url()` from db/database.py
 
+## Scraping & Extraction Strategy
+
+Collectors use a two-tier fetch+extract architecture built on `ScrapeClient`:
+
+- **Primary fetcher:** Cloudflare Browser Rendering `/crawl` endpoint (when `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` are set)
+- **Fallback fetcher:** Crawl4AI (local headless browser)
+- **Primary extraction:** Cloudflare's built-in JSON extraction via `jsonOptions` (prompt + `response_format` schema) — server-side, no separate API call
+- **Fallback extraction:** `LLMExtraction` (Claude API tool_use) — used when Crawl4AI is the fetcher (no built-in extraction)
+- **Lightweight extraction:** `CSSExtraction` — available for sources with stable, simple HTML structure
+
+Each collector defines a Pydantic schema and extraction prompt. When Cloudflare is primary, extraction happens in a single round trip. When falling back to Crawl4AI, `LLMExtraction` handles extraction as a separate step.
+
+Key files: `collectors/scraping/client.py` (orchestrator), `collectors/scraping/fetchers/cloudflare.py`, `collectors/scraping/fetchers/crawl4ai.py`, `collectors/scraping/extraction.py`
+
 ## Key Dependencies
 
 - **SQLAlchemy + Alembic** for DB / migrations
 - **Pydantic** for data validation
 - **Typer** for CLI
-- **crawl4ai** for web scraping
-- **anthropic** for Claude API fallback parsing
+- **crawl4ai** for web scraping (fallback fetcher)
+- **anthropic** for Claude API fallback parsing (LLMExtraction)
 - **structlog** for structured JSON logging
 - **supabase** for cloud sync
+- **httpx** for Cloudflare API calls
 
 ## Conventions
 
@@ -65,4 +80,4 @@ uv run alembic revision --autogenerate -m "description"  # Generate new migratio
 
 ## Progress
 
-Issues are tracked as GitHub issues organized by milestones (M1–M4). Issues #1–7 are complete. Next up: issue #8.
+Issues are tracked as GitHub issues organized by milestones (M1–M4). Issues #1–10 are complete. Next up: issue #11.

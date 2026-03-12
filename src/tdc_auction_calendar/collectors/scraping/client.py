@@ -99,7 +99,7 @@ class ScrapeClient:
                 continue
             try:
                 await fetcher.close()
-            except Exception as exc:
+            except (OSError, httpx.HTTPError, RuntimeError) as exc:
                 logger.warning(
                     "fetcher_close_error",
                     fetcher=type(fetcher).__name__,
@@ -113,14 +113,17 @@ class ScrapeClient:
         render_js: bool = True,
         extraction: ExtractionStrategy | None = None,
         schema: type[BaseModel] | None = None,
+        json_options: dict | None = None,
     ) -> ScrapeResult:
         """Fetch a URL, cache the result, and optionally extract structured data."""
-        # 1. Cache check
-        if self._cache is not None:
+        # 1. Cache check (bypass when json_options provided)
+        if self._cache is not None and json_options is None:
             cached = await self._cache.get(url, render_js)
             if cached is not None:
                 data = None
-                if extraction is not None or schema is not None:
+                if cached.json_data is not None:
+                    data = cached.json_data
+                elif extraction is not None or schema is not None:
                     data = await self._run_extraction(cached, extraction, schema)
                 return ScrapeResult(fetch=cached, data=data, from_cache=True)
 
@@ -129,22 +132,24 @@ class ScrapeClient:
         await self._rate_limiter.wait(domain)
 
         # 3-5. Fetch with retries and fallback
-        fetch_result = await self._fetch_with_fallback(url, render_js)
+        fetch_result = await self._fetch_with_fallback(url, render_js, json_options)
 
-        # 6. Cache store
-        if self._cache is not None:
+        # 6. Cache store (skip when json_options to avoid stale schema data)
+        if self._cache is not None and json_options is None:
             await self._cache.put(url, render_js, fetch_result)
 
-        # 7. Extract
+        # 7. Extract (skip if server-side JSON already populated)
         data = None
-        if extraction is not None or schema is not None:
+        if fetch_result.json_data is not None:
+            data = fetch_result.json_data
+        elif extraction is not None or schema is not None:
             data = await self._run_extraction(fetch_result, extraction, schema)
 
         # 8. Return
         return ScrapeResult(fetch=fetch_result, data=data, from_cache=False)
 
     async def _fetch_with_fallback(
-        self, url: str, render_js: bool
+        self, url: str, render_js: bool, json_options: dict | None = None,
     ) -> FetchResult:
         """Try primary fetcher with retries, then fallback."""
         attempts: list[dict] = []
@@ -153,7 +158,9 @@ class ScrapeClient:
             if fetcher is None:
                 continue
 
-            result = await self._fetch_with_retries(fetcher, fetcher_name, url, render_js, attempts)
+            result = await self._fetch_with_retries(
+                fetcher, fetcher_name, url, render_js, attempts, json_options,
+            )
             if result is not None:
                 return result
 
@@ -166,15 +173,18 @@ class ScrapeClient:
         url: str,
         render_js: bool,
         attempts: list[dict],
+        json_options: dict | None = None,
     ) -> FetchResult | None:
         """Retry a single fetcher with exponential backoff + jitter.
 
-        PermanentFetchError (4xx) is not retried — fails immediately.
+        PermanentFetchError (4xx) is not retried — returns None (allows fallback).
         Transient errors (network, 5xx) are retried up to max_retries.
         """
         for attempt in range(self._max_retries):
             try:
-                result = await fetcher.fetch(url, render_js=render_js)
+                result = await fetcher.fetch(
+                    url, render_js=render_js, json_options=json_options,
+                )
                 logger.info(
                     "fetch_success",
                     url=url,
@@ -229,16 +239,14 @@ class ScrapeClient:
 
         content = fetch_result.markdown or fetch_result.html
         if not content:
-            logger.warning(
-                "extraction_skipped_no_content",
-                url=fetch_result.url,
-                fetcher=fetch_result.fetcher,
+            raise ExtractionError(
+                f"No content available for extraction from {fetch_result.url} "
+                f"(fetcher: {fetch_result.fetcher})"
             )
-            return None
 
         try:
             return await extraction.extract(content, schema=schema)
-        except Exception as exc:
+        except (ValueError, RuntimeError, httpx.HTTPStatusError) as exc:
             logger.error(
                 "extraction_failed",
                 url=fetch_result.url,

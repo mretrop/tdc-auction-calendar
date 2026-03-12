@@ -21,21 +21,47 @@ class Crawl4AiFetcher:
 
     async def _get_crawler(self) -> Any:
         if self._crawler is None:
-            from crawl4ai import AsyncWebCrawler
+            try:
+                from crawl4ai import AsyncWebCrawler
+            except ImportError as exc:
+                raise RuntimeError(
+                    "crawl4ai is required but not installed. Install with: uv add crawl4ai"
+                ) from exc
 
             crawler = AsyncWebCrawler()
-            await crawler.__aenter__()
+            try:
+                await crawler.__aenter__()
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Failed to initialize headless browser: {exc}. "
+                    "Try running: crawl4ai-setup"
+                ) from exc
             self._crawler = crawler
         return self._crawler
 
-    async def fetch(self, url: str, *, render_js: bool = True) -> FetchResult:
+    async def fetch(
+        self, url: str, *, render_js: bool = True, json_options: dict | None = None
+    ) -> FetchResult:
         """Fetch a page using the local headless browser."""
         logger.info("crawl4ai_fetch_start", url=url, render_js=render_js)
 
         crawler = await self._get_crawler()
-        result = await crawler.arun(url)
+        try:
+            result = await crawler.arun(url)
+        except (OSError, RuntimeError):
+            raise
+        except Exception as exc:
+            raise RuntimeError(f"Crawl4AI failed for {url}: {exc}") from exc
 
-        status_code = getattr(result, "status_code", 200)
+        if hasattr(result, "status_code") and result.status_code is not None:
+            status_code = result.status_code
+        else:
+            logger.warning(
+                "crawl4ai_missing_status_code",
+                url=url,
+                result_type=type(result).__name__,
+            )
+            status_code = 200
         if 400 <= status_code < 500:
             raise PermanentFetchError(status_code, f"Crawl4AI got {status_code} for {url}")
         if status_code >= 500:

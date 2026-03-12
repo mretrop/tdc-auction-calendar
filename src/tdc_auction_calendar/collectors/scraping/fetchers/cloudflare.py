@@ -18,7 +18,7 @@ _POLL_INTERVAL = 2.0
 _POLL_TIMEOUT = 90.0
 
 
-class CloudflareFetchError(Exception):
+class CloudflareFetchError(RuntimeError):
     """Raised when a Cloudflare crawl job fails."""
 
 
@@ -47,19 +47,29 @@ class CloudflareFetcher:
     def _crawl_url(self) -> str:
         return f"{_BASE_URL}/{self._account_id}/browser-rendering/crawl"
 
-    async def fetch(self, url: str, *, render_js: bool = True) -> FetchResult:
+    @staticmethod
+    def _build_post_body(url: str, render_js: bool, json_options: dict | None) -> dict:
+        body: dict = {
+            "url": url,
+            "formats": ["markdown", "html"],
+            "render": render_js,
+            "limit": 1,
+        }
+        if json_options is not None:
+            body["formats"].append("json")
+            body["jsonOptions"] = json_options
+        return body
+
+    async def fetch(
+        self, url: str, *, render_js: bool = True, json_options: dict | None = None
+    ) -> FetchResult:
         """Submit a crawl job and poll until complete."""
         logger.info("cloudflare_fetch_start", url=url, render_js=render_js)
 
         # POST to create job
         resp = await self._http.post(
             self._crawl_url,
-            json={
-                "url": url,
-                "formats": ["markdown", "html"],
-                "render": render_js,
-                "limit": 1,
-            },
+            json=self._build_post_body(url, render_js, json_options),
         )
         if 400 <= resp.status_code < 500:
             raise PermanentFetchError(
@@ -70,7 +80,12 @@ class CloudflareFetcher:
             raise CloudflareFetchError(
                 f"Cloudflare API server error {resp.status_code} on job creation"
             )
-        body = resp.json()
+        try:
+            body = resp.json()
+        except ValueError as exc:
+            raise CloudflareFetchError(
+                f"Cloudflare returned non-JSON response for {url}: {exc}"
+            ) from exc
         if "id" not in body:
             raise CloudflareFetchError(f"Cloudflare API response missing 'id': {body}")
         job_id = body["id"]
@@ -91,7 +106,12 @@ class CloudflareFetcher:
                 raise CloudflareFetchError(
                     f"Cloudflare API server error {poll_resp.status_code} polling job {job_id}"
                 )
-            data = poll_resp.json()
+            try:
+                data = poll_resp.json()
+            except ValueError as exc:
+                raise CloudflareFetchError(
+                    f"Cloudflare returned non-JSON poll response for job {job_id}: {exc}"
+                ) from exc
             status = data.get("status")
             if status is None:
                 raise CloudflareFetchError(
@@ -107,11 +127,21 @@ class CloudflareFetcher:
                         f"Cloudflare job {job_id} completed but returned no results"
                     )
                 page = results[0]
-                status_code = page.get("metadata", {}).get("statusCode", 200)
+                metadata = page.get("metadata", {})
+                status_code = metadata.get("statusCode")
+                if status_code is None:
+                    logger.warning(
+                        "cloudflare_missing_status_code",
+                        url=url,
+                        job_id=job_id,
+                        has_metadata=bool(metadata),
+                    )
+                    status_code = 200
                 return FetchResult(
                     url=url,
                     html=page.get("html"),
                     markdown=page.get("markdown"),
+                    json_data=page.get("json"),
                     status_code=status_code,
                     fetcher="cloudflare",
                 )

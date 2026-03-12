@@ -15,6 +15,7 @@ class FetchResult(BaseModel):
     url: str
     html: str | None = None
     markdown: str | None = None
+    json_data: dict | list[dict] | None = None
     status_code: int = Field(ge=100, le=599)
     fetcher: str  # "cloudflare" or "crawl4ai"
 
@@ -22,6 +23,8 @@ class FetchResult(BaseModel):
 class PageFetcher(Protocol):
     """Protocol for page-fetching backends."""
 
-    async def fetch(self, url: str, *, render_js: bool = True) -> FetchResult: ...
+    async def fetch(
+        self, url: str, *, render_js: bool = True, json_options: dict | None = None
+    ) -> FetchResult: ...
 
     async def close(self) -> None: ...
