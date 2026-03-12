@@ -80,3 +80,44 @@ class TestNormalize:
         }
         result = collector.normalize(raw)
         assert result.end_date == datetime.date(2028, 2, 29)
+
+
+class TestCollect:
+    @pytest.mark.asyncio
+    async def test_generates_500_plus_records(self):
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        assert len(auctions) >= 500
+
+    @pytest.mark.asyncio
+    async def test_all_records_have_valid_dates(self):
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        for a in auctions:
+            assert a.start_date.day == 1
+            assert a.end_date >= a.start_date
+
+    @pytest.mark.asyncio
+    async def test_correct_metadata(self):
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        for a in auctions:
+            assert a.source_type == SourceType.STATUTORY
+            assert a.confidence_score == 0.4
+
+    @pytest.mark.asyncio
+    async def test_two_year_span(self):
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        years = {a.start_date.year for a in auctions}
+        import datetime
+        current_year = datetime.date.today().year
+        assert current_year in years
+        assert current_year + 1 in years
+
+    @pytest.mark.asyncio
+    async def test_no_duplicate_dedup_keys(self):
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        keys = [a.dedup_key for a in auctions]
+        assert len(keys) == len(set(keys))

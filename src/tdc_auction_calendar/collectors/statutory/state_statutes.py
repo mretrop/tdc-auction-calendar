@@ -38,7 +38,56 @@ class StatutoryCollector(BaseCollector):
         return SourceType.STATUTORY
 
     async def _fetch(self) -> list[Auction]:
-        raise NotImplementedError
+        states = json.loads((SEED_DIR / "states.json").read_text())
+        counties = json.loads((SEED_DIR / "counties.json").read_text())
+        vendors = json.loads((SEED_DIR / "vendor_mapping.json").read_text())
+
+        vendor_index: dict[tuple[str, str], dict] = {}
+        for v in vendors:
+            vendor_index[(v["state"], v["county"])] = v
+
+        today = date.today()
+        years = [today.year, today.year + 1]
+
+        state_rules = {s["state"]: s for s in states}
+        auctions: list[Auction] = []
+
+        for state_code, rules in state_rules.items():
+            if state_code in self._skip_states:
+                continue
+            typical_months = rules.get("typical_months")
+            if not typical_months:
+                continue
+
+            state_counties = [c for c in counties if c["state"] == state_code]
+
+            for county in state_counties:
+                county_name = county["county_name"]
+                if (state_code, county_name) in self._skip_counties:
+                    continue
+
+                vendor_info = vendor_index.get((state_code, county_name))
+
+                for month in typical_months:
+                    for year in years:
+                        raw: dict = {
+                            "state": state_code,
+                            "county": county_name,
+                            "month": month,
+                            "year": year,
+                            "sale_type": rules["sale_type"],
+                        }
+                        if vendor_info:
+                            raw["vendor"] = vendor_info["vendor"]
+                            raw["portal_url"] = vendor_info.get("portal_url")
+                        auctions.append(self.normalize(raw))
+
+        logger.info(
+            "statutory_fetch_complete",
+            collector=self.name,
+            records=len(auctions),
+        )
+        return auctions
 
     def normalize(self, raw: dict) -> Auction:
         month = raw["month"]
