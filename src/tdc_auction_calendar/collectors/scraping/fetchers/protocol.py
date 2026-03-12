@@ -15,6 +15,7 @@ class FetchResult(BaseModel):
     url: str
     html: str | None = None
     markdown: str | None = None
+    json: dict | list[dict] | None = None
     status_code: int = Field(ge=100, le=599)
     fetcher: str  # "cloudflare" or "crawl4ai"
 
