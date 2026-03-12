@@ -5,10 +5,11 @@ from __future__ import annotations
 from datetime import date
 
 import structlog
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from tdc_auction_calendar.collectors.base import BaseCollector
-from tdc_auction_calendar.collectors.scraping import create_scrape_client
+
+from tdc_auction_calendar.collectors.scraping import ExtractionError, create_scrape_client
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SaleType, SourceType
 
@@ -58,16 +59,31 @@ class IowaCollector(BaseCollector):
         )
 
         auctions: list[Auction] = []
+        failure_count = 0
         for raw in raw_records:
             try:
                 auctions.append(self.normalize(raw))
-            except Exception as exc:
-                logger.warning(
+            except (KeyError, TypeError, ValueError, ValidationError) as exc:
+                failure_count += 1
+                logger.error(
                     "normalize_failed",
                     collector=self.name,
                     raw=raw,
                     error=str(exc),
+                    error_type=type(exc).__name__,
                 )
+        if failure_count:
+            logger.error(
+                "normalize_summary",
+                collector=self.name,
+                total=len(raw_records),
+                succeeded=len(auctions),
+                failed=failure_count,
+            )
+        if raw_records and not auctions:
+            raise ExtractionError(
+                f"{self.name}: all {len(raw_records)} records failed normalization"
+            )
         return auctions
 
     def normalize(self, raw: dict) -> Auction:

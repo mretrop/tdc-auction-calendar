@@ -9,7 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from tdc_auction_calendar.collectors.state_agencies.colorado import ColoradoCollector
-from tdc_auction_calendar.collectors.scraping.client import ScrapeResult
+from tdc_auction_calendar.collectors.scraping.client import ExtractionError, ScrapeResult
 from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
 from tdc_auction_calendar.models.enums import SaleType, SourceType
 
@@ -117,3 +117,20 @@ async def test_fetch_skips_invalid_records(collector):
         auctions = await collector.collect()
 
     assert len(auctions) == 2
+
+
+async def test_fetch_raises_when_all_records_fail(collector):
+    data = [
+        {"county": "", "sale_date": "bad-date"},
+        {"sale_date": "also-bad"},
+    ]
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(data)
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.state_agencies.colorado.create_scrape_client",
+        return_value=mock_client,
+    ):
+        with pytest.raises(ExtractionError, match="all 2 records failed"):
+            await collector.collect()

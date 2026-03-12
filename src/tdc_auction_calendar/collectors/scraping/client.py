@@ -99,7 +99,7 @@ class ScrapeClient:
                 continue
             try:
                 await fetcher.close()
-            except Exception as exc:
+            except (OSError, httpx.HTTPError, RuntimeError) as exc:
                 logger.warning(
                     "fetcher_close_error",
                     fetcher=type(fetcher).__name__,
@@ -177,7 +177,7 @@ class ScrapeClient:
     ) -> FetchResult | None:
         """Retry a single fetcher with exponential backoff + jitter.
 
-        PermanentFetchError (4xx) is not retried — fails immediately.
+        PermanentFetchError (4xx) is not retried — returns None (allows fallback).
         Transient errors (network, 5xx) are retried up to max_retries.
         """
         for attempt in range(self._max_retries):
@@ -239,16 +239,14 @@ class ScrapeClient:
 
         content = fetch_result.markdown or fetch_result.html
         if not content:
-            logger.warning(
-                "extraction_skipped_no_content",
-                url=fetch_result.url,
-                fetcher=fetch_result.fetcher,
+            raise ExtractionError(
+                f"No content available for extraction from {fetch_result.url} "
+                f"(fetcher: {fetch_result.fetcher})"
             )
-            return None
 
         try:
             return await extraction.extract(content, schema=schema)
-        except Exception as exc:
+        except (ValueError, RuntimeError, httpx.HTTPStatusError) as exc:
             logger.error(
                 "extraction_failed",
                 url=fetch_result.url,

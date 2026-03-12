@@ -224,8 +224,8 @@ async def test_scrape_extraction_error_raises(ok_fetcher, rate_limiter, cache):
         await client.scrape("https://example.com", extraction=extractor)
 
 
-async def test_scrape_extraction_skips_empty_content(rate_limiter, cache):
-    """Extraction returns None when fetch has no content."""
+async def test_scrape_extraction_raises_on_empty_content(rate_limiter, cache):
+    """Extraction raises ExtractionError when fetch has no content."""
     fetcher = AsyncMock()
     fetcher.fetch.return_value = FetchResult(
         url="https://example.com", status_code=200, fetcher="primary",
@@ -235,9 +235,10 @@ async def test_scrape_extraction_skips_empty_content(rate_limiter, cache):
 
     extractor = AsyncMock()
     client = _make_client(fetcher, rate_limiter=rate_limiter, cache=cache)
-    result = await client.scrape("https://example.com", extraction=extractor)
 
-    assert result.data is None
+    with pytest.raises(ExtractionError, match="No content available"):
+        await client.scrape("https://example.com", extraction=extractor)
+
     extractor.extract.assert_not_called()
 
 
