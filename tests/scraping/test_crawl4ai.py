@@ -75,3 +75,37 @@ async def test_fetch_5xx_raises_runtime_error():
     fetcher = Crawl4AiFetcher(crawler=mock_crawler)
     with pytest.raises(RuntimeError, match="server error 500"):
         await fetcher.fetch("https://example.com")
+
+
+@pytest.fixture
+def mock_crawler():
+    """Provide a mock AsyncWebCrawler with a default successful result."""
+    crawler = AsyncMock()
+    crawler.arun.return_value = _mock_crawl_result()
+    return crawler
+
+
+async def test_fetch_passes_js_code_and_wait_for(mock_crawler):
+    """Crawl4AI fetcher should pass js_code and wait_for to arun()."""
+    fetcher = Crawl4AiFetcher(crawler=mock_crawler)
+    js = "document.querySelector('#search').click();"
+    wait = "#results"
+
+    await fetcher.fetch("https://example.com", js_code=js, wait_for=wait)
+
+    mock_crawler.arun.assert_called_once()
+    call_kwargs = mock_crawler.arun.call_args
+    assert call_kwargs[0][0] == "https://example.com"
+    assert call_kwargs[1].get("js_code") == js
+    assert call_kwargs[1].get("wait_for") == wait
+
+
+async def test_fetch_omits_js_code_when_none(mock_crawler):
+    """When js_code/wait_for are None, don't pass them to arun()."""
+    fetcher = Crawl4AiFetcher(crawler=mock_crawler)
+
+    await fetcher.fetch("https://example.com")
+
+    call_kwargs = mock_crawler.arun.call_args
+    assert "js_code" not in call_kwargs[1]
+    assert "wait_for" not in call_kwargs[1]

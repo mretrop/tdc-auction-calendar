@@ -61,9 +61,21 @@ class CloudflareFetcher:
         return body
 
     async def fetch(
-        self, url: str, *, render_js: bool = True, json_options: dict | None = None
+        self,
+        url: str,
+        *,
+        render_js: bool = True,
+        json_options: dict | None = None,
+        js_code: str | None = None,
+        wait_for: str | None = None,
     ) -> FetchResult:
         """Submit a crawl job and poll until complete."""
+        if js_code is not None:
+            logger.warning(
+                "cloudflare_js_code_ignored",
+                url=url,
+                msg="Cloudflare fetcher does not support js_code; falling back may use it",
+            )
         logger.info("cloudflare_fetch_start", url=url, render_js=render_js)
 
         # POST to create job

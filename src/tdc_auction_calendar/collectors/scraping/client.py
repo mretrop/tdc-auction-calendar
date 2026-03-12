@@ -114,6 +114,8 @@ class ScrapeClient:
         extraction: ExtractionStrategy | None = None,
         schema: type[BaseModel] | None = None,
         json_options: dict | None = None,
+        js_code: str | None = None,
+        wait_for: str | None = None,
     ) -> ScrapeResult:
         """Fetch a URL, cache the result, and optionally extract structured data."""
         # 1. Cache check (bypass when json_options provided)
@@ -132,7 +134,7 @@ class ScrapeClient:
         await self._rate_limiter.wait(domain)
 
         # 3-5. Fetch with retries and fallback
-        fetch_result = await self._fetch_with_fallback(url, render_js, json_options)
+        fetch_result = await self._fetch_with_fallback(url, render_js, json_options, js_code, wait_for)
 
         # 6. Cache store (skip when json_options to avoid stale schema data)
         if self._cache is not None and json_options is None:
@@ -150,6 +152,7 @@ class ScrapeClient:
 
     async def _fetch_with_fallback(
         self, url: str, render_js: bool, json_options: dict | None = None,
+        js_code: str | None = None, wait_for: str | None = None,
     ) -> FetchResult:
         """Try primary fetcher with retries, then fallback."""
         attempts: list[dict] = []
@@ -160,6 +163,7 @@ class ScrapeClient:
 
             result = await self._fetch_with_retries(
                 fetcher, fetcher_name, url, render_js, attempts, json_options,
+                js_code, wait_for,
             )
             if result is not None:
                 return result
@@ -174,6 +178,8 @@ class ScrapeClient:
         render_js: bool,
         attempts: list[dict],
         json_options: dict | None = None,
+        js_code: str | None = None,
+        wait_for: str | None = None,
     ) -> FetchResult | None:
         """Retry a single fetcher with exponential backoff + jitter.
 
@@ -184,6 +190,7 @@ class ScrapeClient:
             try:
                 result = await fetcher.fetch(
                     url, render_js=render_js, json_options=json_options,
+                    js_code=js_code, wait_for=wait_for,
                 )
                 logger.info(
                     "fetch_success",
