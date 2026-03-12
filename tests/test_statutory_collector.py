@@ -170,14 +170,163 @@ class TestPerformance:
 
 
 class TestEdgeCases:
-    def test_null_typical_months_skipped(self):
-        """States with typical_months=None would be skipped gracefully.
+    @pytest.mark.asyncio
+    async def test_null_typical_months_skipped(self, monkeypatch):
+        """States with typical_months=None produce zero auctions for that state."""
+        fake_states = [
+            {"state": "XX", "sale_type": "deed", "typical_months": None},
+            {"state": "YY", "sale_type": "lien", "typical_months": [6]},
+        ]
+        fake_counties = [
+            {"state": "XX", "county_name": "FakeCounty"},
+            {"state": "YY", "county_name": "TestCounty"},
+        ]
+        fake_vendors: list = []
 
-        Current seed data has no null typical_months, so we test normalize()
-        still works and verify _fetch logic by checking the collector
-        instantiates and runs without error.
-        """
+        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
+
+        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
         collector = StatutoryCollector()
-        # Verify the collector handles the field check — this is tested
-        # implicitly via collect(), but we assert it doesn't crash
-        assert collector.name == "statutory"
+        auctions = await collector.collect()
+        assert all(a.state != "XX" for a in auctions)
+        assert any(a.state == "YY" for a in auctions)
+
+    @pytest.mark.asyncio
+    async def test_empty_typical_months_skipped(self, monkeypatch):
+        """States with typical_months=[] produce zero auctions for that state."""
+        fake_states = [
+            {"state": "XX", "sale_type": "deed", "typical_months": []},
+            {"state": "YY", "sale_type": "lien", "typical_months": [3]},
+        ]
+        fake_counties = [
+            {"state": "XX", "county_name": "FakeCounty"},
+            {"state": "YY", "county_name": "TestCounty"},
+        ]
+        fake_vendors: list = []
+
+        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
+
+        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        assert all(a.state != "XX" for a in auctions)
+        assert any(a.state == "YY" for a in auctions)
+
+
+class TestIsolatedFetchLogic:
+    """Unit tests for _fetch() logic using mocked seed data."""
+
+    @pytest.mark.asyncio
+    async def test_skip_states_with_mocked_data(self, monkeypatch):
+        fake_states = [
+            {"state": "AA", "sale_type": "deed", "typical_months": [1]},
+            {"state": "BB", "sale_type": "lien", "typical_months": [6]},
+        ]
+        fake_counties = [
+            {"state": "AA", "county_name": "Alpha"},
+            {"state": "BB", "county_name": "Beta"},
+        ]
+        fake_vendors: list = []
+
+        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
+
+        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector(skip_states={"AA"})
+        auctions = await collector.collect()
+        assert all(a.state != "AA" for a in auctions)
+        assert any(a.state == "BB" for a in auctions)
+
+    @pytest.mark.asyncio
+    async def test_skip_counties_with_mocked_data(self, monkeypatch):
+        fake_states = [
+            {"state": "AA", "sale_type": "deed", "typical_months": [1]},
+        ]
+        fake_counties = [
+            {"state": "AA", "county_name": "Alpha"},
+            {"state": "AA", "county_name": "Beta"},
+        ]
+        fake_vendors: list = []
+
+        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
+
+        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector(skip_counties={("AA", "Alpha")})
+        auctions = await collector.collect()
+        assert all(a.county != "Alpha" for a in auctions)
+        assert any(a.county == "Beta" for a in auctions)
+
+    @pytest.mark.asyncio
+    async def test_vendor_enrichment_with_mocked_data(self, monkeypatch):
+        fake_states = [
+            {"state": "AA", "sale_type": "deed", "typical_months": [6]},
+        ]
+        fake_counties = [
+            {"state": "AA", "county_name": "Alpha"},
+        ]
+        fake_vendors = [
+            {"state": "AA", "county": "Alpha", "vendor": "TestVendor", "portal_url": "https://example.com"},
+        ]
+
+        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
+
+        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        assert all(a.vendor == "TestVendor" for a in auctions)
+        assert all(a.source_url == "https://example.com" for a in auctions)
+
+    @pytest.mark.asyncio
+    async def test_vendor_without_portal_url(self, monkeypatch):
+        fake_states = [
+            {"state": "AA", "sale_type": "deed", "typical_months": [6]},
+        ]
+        fake_counties = [
+            {"state": "AA", "county_name": "Alpha"},
+        ]
+        fake_vendors = [
+            {"state": "AA", "county": "Alpha", "vendor": "NoPortalVendor"},
+        ]
+
+        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
+
+        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        assert all(a.vendor == "NoPortalVendor" for a in auctions)
+        assert all(a.source_url is None for a in auctions)
+
+    @pytest.mark.asyncio
+    async def test_sale_type_lien_propagates(self, monkeypatch):
+        fake_states = [
+            {"state": "AA", "sale_type": "lien", "typical_months": [3]},
+        ]
+        fake_counties = [
+            {"state": "AA", "county_name": "Alpha"},
+        ]
+        fake_vendors: list = []
+
+        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
+
+        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        assert all(a.sale_type == SaleType.LIEN for a in auctions)
+
+    @pytest.mark.asyncio
+    async def test_missing_county_name_skipped(self, monkeypatch):
+        fake_states = [
+            {"state": "AA", "sale_type": "deed", "typical_months": [6]},
+        ]
+        fake_counties = [
+            {"state": "AA"},  # missing county_name
+            {"state": "AA", "county_name": "Good"},
+        ]
+        fake_vendors: list = []
+
+        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
+
+        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        assert len(auctions) > 0
+        assert all(a.county == "Good" for a in auctions)

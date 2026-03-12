@@ -19,6 +19,21 @@ DEFAULT_SKIP_STATES: set[str] = set()
 DEFAULT_SKIP_COUNTIES: set[tuple[str, str]] = set()
 
 
+def _load_seed_files() -> tuple[list[dict], list[dict], list[dict]]:
+    """Load and parse the three seed JSON files. Returns (states, counties, vendors)."""
+    try:
+        states = json.loads((SEED_DIR / "states.json").read_text())
+        counties = json.loads((SEED_DIR / "counties.json").read_text())
+        vendors = json.loads((SEED_DIR / "vendor_mapping.json").read_text())
+    except FileNotFoundError as exc:
+        logger.error("statutory_seed_file_missing", seed_dir=str(SEED_DIR), error=str(exc))
+        raise
+    except json.JSONDecodeError as exc:
+        logger.error("statutory_seed_file_corrupt", seed_dir=str(SEED_DIR), error=str(exc))
+        raise
+    return states, counties, vendors
+
+
 class StatutoryCollector(BaseCollector):
 
     def __init__(
@@ -38,9 +53,7 @@ class StatutoryCollector(BaseCollector):
         return SourceType.STATUTORY
 
     async def _fetch(self) -> list[Auction]:
-        states = json.loads((SEED_DIR / "states.json").read_text())
-        counties = json.loads((SEED_DIR / "counties.json").read_text())
-        vendors = json.loads((SEED_DIR / "vendor_mapping.json").read_text())
+        states, counties, vendors = _load_seed_files()
 
         vendor_index: dict[tuple[str, str], dict] = {}
         for v in vendors:
@@ -57,12 +70,21 @@ class StatutoryCollector(BaseCollector):
                 continue
             typical_months = rules.get("typical_months")
             if not typical_months:
+                logger.debug("statutory_skip_state_no_months", state=state_code)
+                continue
+
+            sale_type = rules.get("sale_type")
+            if not sale_type:
+                logger.warning("statutory_skip_state_no_sale_type", state=state_code)
                 continue
 
             state_counties = [c for c in counties if c["state"] == state_code]
 
             for county in state_counties:
-                county_name = county["county_name"]
+                county_name = county.get("county_name")
+                if not county_name:
+                    logger.warning("statutory_skip_county_missing_name", state=state_code, county_record=county)
+                    continue
                 if (state_code, county_name) in self._skip_counties:
                     continue
 
@@ -75,10 +97,10 @@ class StatutoryCollector(BaseCollector):
                             "county": county_name,
                             "month": month,
                             "year": year,
-                            "sale_type": rules["sale_type"],
+                            "sale_type": sale_type,
                         }
                         if vendor_info:
-                            raw["vendor"] = vendor_info["vendor"]
+                            raw["vendor"] = vendor_info.get("vendor")
                             raw["portal_url"] = vendor_info.get("portal_url")
                         auctions.append(self.normalize(raw))
 
