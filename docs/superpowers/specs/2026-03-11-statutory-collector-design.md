@@ -14,7 +14,7 @@ A Tier 4 collector that generates `Auction` records from seed data alone (no HTT
 - `src/tdc_auction_calendar/collectors/statutory/state_statutes.py`
 - `tests/test_statutory_collector.py`
 
-**Class:** `StatutoryCollector(BaseCollector)`
+**Class:** `StatutoryCollector(BaseCollector)` — defined in `state_statutes.py`, re-exported from `__init__.py`.
 
 **Properties:**
 - `name` -> `"statutory"`
@@ -37,17 +37,20 @@ Reads directly from JSON files via `SEED_DIR` (no DB dependency):
 
 ## `_fetch()` Logic
 
+`_fetch()` is `async` (required by `BaseCollector`), though it performs no async I/O.
+
 1. Load the three seed JSON files.
-2. Index vendor mappings by `(state, county)` for O(1) lookup.
+2. Index vendor mappings by `(state, county)` for O(1) lookup. Note: `vendor_mapping.json` uses `county` while `counties.json` uses `county_name` — the lookup key joins county's `county_name` against vendor mapping's `county`.
 3. Set `years = [current_year, current_year + 1]`.
 4. For each state in `states.json`:
    - Skip if `state` in `skip_states`.
+   - Skip if `typical_months` is `None` or empty.
    - For each county where `county.state == state.state`:
      - Skip if `(state, county_name)` in `skip_counties`.
      - For each month in `state.typical_months`:
        - For each year in `years`:
          - Build a raw dict and call `normalize()`.
-5. Return all generated `Auction` objects.
+5. Return all generated `Auction` objects. `BaseCollector.collect()` handles dedup automatically.
 
 ## `normalize()` Method
 
@@ -74,7 +77,7 @@ For each `typical_month` in a state's rules:
 
 ## Vendor Enrichment
 
-Vendor mappings are indexed by `(state, county_name)`. When a match exists:
+Vendor mappings are indexed by `(state, county)` where `county` is the vendor mapping's `county` field (matched against county's `county_name`). When a match exists:
 - `vendor` field is set to the vendor name
 - `source_url` field is set to the `portal_url`
 
@@ -101,6 +104,8 @@ Tests use real seed JSON files (no mocking).
 | Performance | `collect()` < 2 seconds |
 | No duplicates | No duplicate dedup keys in output |
 | Two-year span | Records cover both current year and next year |
+| normalize() unit test | `normalize()` produces a valid Pydantic `Auction` from a raw dict |
+| Null typical_months | States with `typical_months = None` or `[]` are skipped gracefully |
 
 ## Acceptance Criteria (from issue)
 
