@@ -1,0 +1,13 @@
+[
+  {"county": "Black Hawk", "sale_date": "2026-06-15", "sale_type": "lien"},
+  {"county": "Dallas", "sale_date": "2026-06-16", "sale_type": "lien"},
+  {"county": "Dubuque", "sale_date": "2026-06-15", "sale_type": "lien"},
+  {"county": "Johnson", "sale_date": "2026-06-17", "sale_type": "lien"},
+  {"county": "Linn", "sale_date": "2026-06-15", "sale_type": "lien"},
+  {"county": "Polk", "sale_date": "2026-06-16", "sale_type": "lien"},
+  {"county": "Pottawattamie", "sale_date": "2026-06-17", "sale_type": "lien"},
+  {"county": "Scott", "sale_date": "2026-06-15", "sale_type": "lien"},
+  {"county": "Story", "sale_date": "2026-06-16", "sale_type": "lien"},
+  {"county": "Woodbury", "sale_date": "2026-06-17", "sale_type": "lien"},
+  {"county": "Warren", "sale_date": "2026-06-15", "sale_type": "lien"}
+]
