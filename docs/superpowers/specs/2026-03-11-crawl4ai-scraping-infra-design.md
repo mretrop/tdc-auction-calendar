@@ -17,6 +17,45 @@ Rather than coupling to a single scraping engine, we define a `PageFetcher` prot
 
 Extraction (LLM or CSS) is a separate layer that operates on fetched content regardless of which backend produced it. Collectors interact only with `ScrapeClient`, which orchestrates fetching, caching, rate limiting, retries, and extraction behind a single `scrape()` method.
 
+## Collector Integration Pattern
+
+Web-scraping collectors receive a `ScrapeClient` via their constructor, defaulting to the standard factory:
+
+```python
+class SomeWebCollector(BaseCollector):
+    def __init__(self, scrape_client: ScrapeClient | None = None):
+        self._client = scrape_client or create_scrape_client()
+
+    async def _fetch(self) -> list[Auction]:
+        result = await self._client.scrape(url, schema=MySchema)
+        return [self.normalize(row) for row in result.data.rows]
+```
+
+`BaseCollector` itself is unchanged — it has no opinion on how `_fetch` gets its data. The convention is that web-scraping collectors accept an optional `ScrapeClient` in `__init__`, while non-web collectors (like `StatutoryCollector`) don't need one.
+
+## Error Handling
+
+If both primary and fallback fetchers exhaust all retries, `scrape()` raises `ScrapeError`:
+
+```python
+class ScrapeError(Exception):
+    """Raised when all fetchers fail after retries."""
+    def __init__(self, url: str, attempts: list[dict]): ...
+```
+
+`attempts` contains a log of each failed attempt (fetcher name, error type, status code if any). Collectors should handle `ScrapeError` in their `_fetch()` — typically by logging and skipping that URL, not by crashing the entire collection run.
+
+## Resource Lifecycle
+
+`ScrapeClient` implements `AsyncContextManager` for resource cleanup:
+
+```python
+async with create_scrape_client() as client:
+    result = await client.scrape(url)
+```
+
+On `__aenter__`, initializes fetcher resources (e.g., Crawl4AI's browser instance). On `__aexit__`, tears them down. For collectors that make multiple calls, the client should be entered once and reused.
+
 ## Module Structure
 
 ```
@@ -92,8 +131,10 @@ class ScrapeResult(BaseModel):
 ```python
 # extraction.py
 class ExtractionStrategy(Protocol):
-    async def extract(self, content: str, **kwargs) -> dict | BaseModel: ...
+    async def extract(self, content: str, *, schema: type[BaseModel] | None = None) -> dict | BaseModel: ...
 ```
+
+**Schema flow:** When `scrape()` is called with both an `extraction` strategy and a `schema`, the client forwards `schema` to the strategy's `extract()` method. `LLMExtraction` uses the schema to construct a Claude tool_use call and returns a validated Pydantic instance. `CSSExtraction` ignores the schema parameter (it extracts raw dicts based on its CSS selectors). If only `schema` is provided without an explicit `extraction`, `scrape()` defaults to `LLMExtraction`.
 
 ## Fetcher Backends
 
@@ -103,8 +144,16 @@ class ExtractionStrategy(Protocol):
 - Uses `httpx.AsyncClient` for HTTP calls
 - Reads `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` from environment
 - Requests `markdown` + `html` formats
-- Handles the async job flow internally: POST to start, poll with GET until complete
 - `render_js` maps to Cloudflare's `render` parameter
+
+**Async job flow:** The `/crawl` endpoint is asynchronous:
+1. POST with `url`, `formats`, `render`, `limit: 1` → returns `{ "id": "<job_id>" }`
+2. Poll GET `/crawl/<job_id>` every 2 seconds, max 90 seconds total
+3. Job status values: `running` (keep polling), `completed` (extract results), `errored`/`cancelled_*` (treat as failure)
+4. On `completed`, extract the first result's `markdown` and `html` fields
+5. Poll timeout (90s) is treated as a transient failure (triggers retry at the ScrapeClient level)
+
+This polling is internal to the fetcher and separate from ScrapeClient's retry logic. If the job completes but with an HTTP error status in the result, that propagates as a `FetchResult` with the error status code.
 
 ### Crawl4AiFetcher
 
@@ -129,16 +178,36 @@ All steps are logged via structlog (cache hit/miss, fetcher used, retry attempts
 
 ## Rate Limiter
 
+```python
+class RateLimiter:
+    def __init__(self, default_delay: float = 2.0, per_domain: dict[str, float] | None = None): ...
+    async def wait(self, domain: str) -> None:
+        """Wait until the per-domain delay has elapsed since the last request."""
+        ...
+```
+
 - Per-domain delay: configurable, default 2 seconds between requests to the same domain.
-- Collectors can override per-domain delays, e.g., `rate_limits={"realauction.com": 5.0}`.
+- Collectors can override per-domain delays, e.g., `per_domain={"realauction.com": 5.0}`.
 - Implementation: tracks last request timestamp per domain, async sleep for remaining delay.
 
 ## Response Cache
 
-- File-based cache in `data/cache/` (configurable via `SCRAPE_CACHE_DIR`).
+```python
+class ResponseCache:
+    def __init__(self, cache_dir: str = "data/cache", ttl: int = 21600): ...
+    async def get(self, url: str, render_js: bool) -> FetchResult | None:
+        """Return cached FetchResult if present and not expired, else None."""
+        ...
+    async def put(self, url: str, render_js: bool, result: FetchResult) -> None:
+        """Write FetchResult to cache with expiry metadata."""
+        ...
+```
+
+- File-based cache in `data/cache/` (configurable via `SCRAPE_CACHE_DIR`). Ensure `data/cache/` is in `.gitignore`.
 - Cache key: SHA-256 hash of `(url, render_js)`.
 - TTL: configurable, default 6 hours.
 - Stores `FetchResult` as JSON with a metadata header containing the expiry timestamp.
+- Caching is at the fetch layer only. Extraction always re-runs on cache hits if an extraction strategy is provided.
 - Cache hits and misses logged via structlog.
 
 ## Extraction Strategies
@@ -207,14 +276,14 @@ No real HTTP calls in any test. All external I/O is mocked.
 
 ## Dependencies
 
-No new dependencies required. Already in `pyproject.toml`:
+No new dependencies required for core functionality. Already in `pyproject.toml`:
 - `crawl4ai>=0.4` — for Crawl4AiFetcher
 - `httpx>=0.27` — for CloudflareFetcher API calls
 - `anthropic>=0.40` — for LLM extraction
 - `structlog>=24.0` — for logging
 - `pydantic>=2.0` — for schemas and models
 
-HTML parsing for CSS extraction: evaluate whether crawl4ai's built-in parser or `beautifulsoup4` (new dependency) is more appropriate during implementation.
+HTML parsing for CSS extraction: evaluate whether crawl4ai's built-in parser suffices or if `beautifulsoup4` should be added during implementation.
 
 ## Out of Scope
 
