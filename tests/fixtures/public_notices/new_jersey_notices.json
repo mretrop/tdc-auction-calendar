@@ -1,0 +1,9 @@
+[
+  {"county": "Atlantic", "sale_date": "2026-10-20", "sale_type": "lien"},
+  {"county": "Bergen", "sale_date": "2026-10-22", "sale_type": "lien"},
+  {"county": "Burlington", "sale_date": "2026-10-20", "sale_type": "lien"},
+  {"county": "Camden", "sale_date": "2026-10-22", "sale_type": "lien"},
+  {"county": "Essex", "sale_date": "2026-10-20", "sale_type": "lien"},
+  {"county": "Hudson", "sale_date": "2026-10-22", "sale_type": "lien"},
+  {"county": "Middlesex", "sale_date": "2026-10-20", "sale_type": "lien"}
+]

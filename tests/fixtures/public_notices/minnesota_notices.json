@@ -1,0 +1,9 @@
+[
+  {"county": "Anoka", "sale_date": "2026-05-15", "sale_type": "deed"},
+  {"county": "Dakota", "sale_date": "2026-05-20", "sale_type": "deed"},
+  {"county": "Hennepin", "sale_date": "2026-05-15", "sale_type": "deed"},
+  {"county": "Olmsted", "sale_date": "2026-05-20", "sale_type": "deed"},
+  {"county": "Ramsey", "sale_date": "2026-05-15", "sale_type": "deed"},
+  {"county": "St. Louis", "sale_date": "2026-05-20", "sale_type": "deed"},
+  {"county": "Washington", "sale_date": "2026-05-15", "sale_type": "deed"}
+]
