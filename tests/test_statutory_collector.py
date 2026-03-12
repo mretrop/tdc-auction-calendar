@@ -338,6 +338,84 @@ class TestIsolatedFetchLogic:
         assert any(a.state == "YY" for a in auctions)
 
 
+    @pytest.mark.asyncio
+    async def test_vendor_missing_state_key_skipped(self, monkeypatch):
+        """Vendor records missing state/county keys are skipped; auction has no vendor."""
+        fake_states = [
+            {"state": "AA", "sale_type": "deed", "typical_months": [6]},
+        ]
+        fake_counties = [
+            {"state": "AA", "county_name": "Alpha"},
+        ]
+        fake_vendors = [
+            {"vendor": "OrphanVendor", "portal_url": "https://example.com"},  # missing state & county
+        ]
+
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        assert len(auctions) > 0
+        assert all(a.vendor is None for a in auctions)
+        assert all(a.source_url is None for a in auctions)
+
+    @pytest.mark.asyncio
+    async def test_vendor_missing_name_skips_enrichment(self, monkeypatch):
+        """Vendor record with no 'vendor' key produces auction without vendor info."""
+        fake_states = [
+            {"state": "AA", "sale_type": "deed", "typical_months": [6]},
+        ]
+        fake_counties = [
+            {"state": "AA", "county_name": "Alpha"},
+        ]
+        fake_vendors = [
+            {"state": "AA", "county": "Alpha", "portal_url": "https://example.com"},  # no vendor key
+        ]
+
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        assert len(auctions) > 0
+        assert all(a.vendor is None for a in auctions)
+        assert all(a.source_url is None for a in auctions)
+
+    @pytest.mark.asyncio
+    async def test_state_missing_state_key_skipped(self, monkeypatch):
+        """State records missing the 'state' key are skipped."""
+        fake_states = [
+            {"sale_type": "deed", "typical_months": [6]},  # missing state key
+            {"state": "YY", "sale_type": "lien", "typical_months": [6]},
+        ]
+        fake_counties = [
+            {"state": "YY", "county_name": "TestCounty"},
+        ]
+        fake_vendors: list = []
+
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        assert any(a.state == "YY" for a in auctions)
+
+    @pytest.mark.asyncio
+    async def test_normalize_failure_skips_record(self, monkeypatch):
+        """A record that fails Pydantic validation is skipped, not fatal."""
+        fake_states = [
+            {"state": "AA", "sale_type": "invalid_type", "typical_months": [6]},
+            {"state": "BB", "sale_type": "deed", "typical_months": [6]},
+        ]
+        fake_counties = [
+            {"state": "AA", "county_name": "Alpha"},
+            {"state": "BB", "county_name": "Beta"},
+        ]
+        fake_vendors: list = []
+
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        # AA records fail validation but BB records still collected
+        assert all(a.state != "AA" for a in auctions)
+        assert any(a.state == "BB" for a in auctions)
+
+
 class TestLoadSeedFiles:
     """Tests for _load_seed_files() error handling."""
 

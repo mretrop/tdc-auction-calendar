@@ -13,6 +13,8 @@ from tdc_auction_calendar.db.seed_loader import SEED_DIR
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SourceType
 
+from pydantic import ValidationError
+
 logger = structlog.get_logger()
 
 DEFAULT_SKIP_STATES: set[str] = set()
@@ -67,7 +69,13 @@ class StatutoryCollector(BaseCollector):
         today = date.today()
         years = [today.year, today.year + 1]
 
-        state_rules = {s["state"]: s for s in states}
+        state_rules: dict[str, dict] = {}
+        for s in states:
+            s_state = s.get("state")
+            if not s_state:
+                logger.warning("statutory_skip_state_missing_code", state_record=s)
+                continue
+            state_rules[s_state] = s
         auctions: list[Auction] = []
 
         for state_code, rules in state_rules.items():
@@ -112,9 +120,20 @@ class StatutoryCollector(BaseCollector):
                                     state=state_code,
                                     county=county_name,
                                 )
-                            raw["vendor"] = vendor_name
-                            raw["portal_url"] = vendor_info.get("portal_url")
-                        auctions.append(self.normalize(raw))
+                            else:
+                                raw["vendor"] = vendor_name
+                                raw["portal_url"] = vendor_info.get("portal_url")
+                        try:
+                            auctions.append(self.normalize(raw))
+                        except (ValidationError, ValueError) as exc:
+                            logger.error(
+                                "statutory_normalize_failed",
+                                state=state_code,
+                                county=county_name,
+                                month=month,
+                                year=year,
+                                error=str(exc),
+                            )
 
         logger.info(
             "statutory_fetch_complete",
