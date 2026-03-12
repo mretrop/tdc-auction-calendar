@@ -28,7 +28,9 @@ class Crawl4AiFetcher:
             self._crawler = crawler
         return self._crawler
 
-    async def fetch(self, url: str, *, render_js: bool = True) -> FetchResult:
+    async def fetch(
+        self, url: str, *, render_js: bool = True, json_options: dict | None = None
+    ) -> FetchResult:
         """Fetch a page using the local headless browser."""
         logger.info("crawl4ai_fetch_start", url=url, render_js=render_js)
 

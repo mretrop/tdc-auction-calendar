@@ -23,6 +23,8 @@ class FetchResult(BaseModel):
 class PageFetcher(Protocol):
     """Protocol for page-fetching backends."""
 
-    async def fetch(self, url: str, *, render_js: bool = True) -> FetchResult: ...
+    async def fetch(
+        self, url: str, *, render_js: bool = True, json_options: dict | None = None
+    ) -> FetchResult: ...
 
     async def close(self) -> None: ...
