@@ -121,3 +121,39 @@ class TestCollect:
         auctions = await collector.collect()
         keys = [a.dedup_key for a in auctions]
         assert len(keys) == len(set(keys))
+
+
+class TestSkipLists:
+    @pytest.mark.asyncio
+    async def test_skip_states(self):
+        collector = StatutoryCollector(skip_states={"FL"})
+        auctions = await collector.collect()
+        assert all(a.state != "FL" for a in auctions)
+        assert len(auctions) > 0  # other states still present
+
+    @pytest.mark.asyncio
+    async def test_skip_counties(self):
+        collector = StatutoryCollector(skip_counties={("AL", "Jefferson")})
+        auctions = await collector.collect()
+        assert all(
+            not (a.state == "AL" and a.county == "Jefferson") for a in auctions
+        )
+        # other AL counties still present
+        assert any(a.state == "AL" for a in auctions)
+
+
+class TestVendorEnrichment:
+    @pytest.mark.asyncio
+    async def test_some_records_have_vendor(self):
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        with_vendor = [a for a in auctions if a.vendor is not None]
+        assert len(with_vendor) > 0
+
+    @pytest.mark.asyncio
+    async def test_vendor_records_have_source_url(self):
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        with_vendor = [a for a in auctions if a.vendor is not None]
+        for a in with_vendor:
+            assert a.source_url is not None
