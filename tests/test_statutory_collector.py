@@ -6,10 +6,10 @@ import time
 
 import pytest
 
+import tdc_auction_calendar.collectors.statutory.state_statutes as _stat_mod
 from tdc_auction_calendar.collectors.statutory import StatutoryCollector
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SaleType, SourceType
-import tdc_auction_calendar.collectors.statutory.state_statutes as _stat_mod
 
 
 class TestNormalize:

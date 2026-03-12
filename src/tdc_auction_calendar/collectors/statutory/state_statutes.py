@@ -129,7 +129,7 @@ class StatutoryCollector(BaseCollector):
                             raw["portal_url"] = portal_url
                         try:
                             auctions.append(self.normalize(raw))
-                        except (ValidationError, ValueError, TypeError, KeyError) as exc:
+                        except (ValidationError, ValueError) as exc:
                             skipped += 1
                             logger.error(
                                 "statutory_normalize_failed",
