@@ -1,0 +1,130 @@
+"""Cloudflare Browser Rendering fetcher backend."""
+
+from __future__ import annotations
+
+import asyncio
+import os
+
+import httpx
+import structlog
+
+from tdc_auction_calendar.collectors.scraping.client import PermanentFetchError
+from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
+
+logger = structlog.get_logger()
+
+_BASE_URL = "https://api.cloudflare.com/client/v4/accounts"
+_POLL_INTERVAL = 2.0
+_POLL_TIMEOUT = 90.0
+
+
+class CloudflareFetchError(Exception):
+    """Raised when a Cloudflare crawl job fails."""
+
+
+class CloudflareFetcher:
+    """Fetches pages via Cloudflare Browser Rendering /crawl API."""
+
+    def __init__(
+        self,
+        account_id: str | None = None,
+        api_token: str | None = None,
+        connect_timeout: float = 30.0,
+        read_timeout: float = 60.0,
+    ) -> None:
+        self._account_id = account_id or os.environ.get("CLOUDFLARE_ACCOUNT_ID")
+        self._api_token = api_token or os.environ.get("CLOUDFLARE_API_TOKEN")
+        if not self._account_id:
+            raise ValueError("CLOUDFLARE_ACCOUNT_ID is required (pass account_id or set env var)")
+        if not self._api_token:
+            raise ValueError("CLOUDFLARE_API_TOKEN is required (pass api_token or set env var)")
+        self._http = httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=connect_timeout, read=read_timeout, write=30.0, pool=30.0),
+            headers={"Authorization": f"Bearer {self._api_token}"},
+        )
+
+    @property
+    def _crawl_url(self) -> str:
+        return f"{_BASE_URL}/{self._account_id}/browser-rendering/crawl"
+
+    async def fetch(self, url: str, *, render_js: bool = True) -> FetchResult:
+        """Submit a crawl job and poll until complete."""
+        logger.info("cloudflare_fetch_start", url=url, render_js=render_js)
+
+        # POST to create job
+        resp = await self._http.post(
+            self._crawl_url,
+            json={
+                "url": url,
+                "formats": ["markdown", "html"],
+                "render": render_js,
+                "limit": 1,
+            },
+        )
+        if 400 <= resp.status_code < 500:
+            raise PermanentFetchError(
+                resp.status_code,
+                f"Cloudflare API client error on job creation",
+            )
+        if resp.status_code >= 500:
+            raise CloudflareFetchError(
+                f"Cloudflare API server error {resp.status_code} on job creation"
+            )
+        body = resp.json()
+        if "id" not in body:
+            raise CloudflareFetchError(f"Cloudflare API response missing 'id': {body}")
+        job_id = body["id"]
+
+        # Poll for completion
+        elapsed = 0.0
+        while elapsed < _POLL_TIMEOUT:
+            await asyncio.sleep(_POLL_INTERVAL)
+            elapsed += _POLL_INTERVAL
+
+            poll_resp = await self._http.get(f"{self._crawl_url}/{job_id}")
+            if 400 <= poll_resp.status_code < 500:
+                raise PermanentFetchError(
+                    poll_resp.status_code,
+                    f"Cloudflare API client error polling job {job_id}",
+                )
+            if poll_resp.status_code >= 500:
+                raise CloudflareFetchError(
+                    f"Cloudflare API server error {poll_resp.status_code} polling job {job_id}"
+                )
+            data = poll_resp.json()
+            status = data.get("status")
+            if status is None:
+                raise CloudflareFetchError(
+                    f"Cloudflare API response missing 'status': {data}"
+                )
+
+            if status == "running":
+                continue
+            if status == "completed":
+                results = data.get("result") or []
+                if not results:
+                    raise CloudflareFetchError(
+                        f"Cloudflare job {job_id} completed but returned no results"
+                    )
+                page = results[0]
+                status_code = page.get("metadata", {}).get("statusCode", 200)
+                return FetchResult(
+                    url=url,
+                    html=page.get("html"),
+                    markdown=page.get("markdown"),
+                    status_code=status_code,
+                    fetcher="cloudflare",
+                )
+
+            # errored, cancelled_*, etc.
+            raise CloudflareFetchError(
+                f"Cloudflare crawl job {job_id} failed with status: {status}"
+            )
+
+        raise CloudflareFetchError(
+            f"Cloudflare crawl job {job_id} timed out after {_POLL_TIMEOUT}s"
+        )
+
+    async def close(self) -> None:
+        """Close the underlying HTTP client."""
+        await self._http.aclose()
