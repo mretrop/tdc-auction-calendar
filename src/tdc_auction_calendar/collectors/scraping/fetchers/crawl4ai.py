@@ -6,6 +6,7 @@ from typing import Any
 
 import structlog
 
+from tdc_auction_calendar.collectors.scraping.client import PermanentFetchError
 from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
 
 logger = structlog.get_logger()
@@ -34,11 +35,17 @@ class Crawl4AiFetcher:
         crawler = await self._get_crawler()
         result = await crawler.arun(url)
 
+        status_code = getattr(result, "status_code", 200)
+        if 400 <= status_code < 500:
+            raise PermanentFetchError(status_code, f"Crawl4AI got {status_code} for {url}")
+        if status_code >= 500:
+            raise RuntimeError(f"Crawl4AI got server error {status_code} for {url}")
+
         return FetchResult(
             url=url,
             html=result.html,
             markdown=result.markdown,
-            status_code=result.status_code,
+            status_code=status_code,
             fetcher="crawl4ai",
         )
 

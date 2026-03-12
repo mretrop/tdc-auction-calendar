@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from tdc_auction_calendar.collectors.scraping.client import PermanentFetchError
 from tdc_auction_calendar.collectors.scraping.fetchers.crawl4ai import Crawl4AiFetcher
 
 
@@ -51,4 +52,26 @@ async def test_fetch_error_propagates():
 
     fetcher = Crawl4AiFetcher(crawler=mock_crawler)
     with pytest.raises(RuntimeError, match="Browser crashed"):
+        await fetcher.fetch("https://example.com")
+
+
+async def test_fetch_4xx_raises_permanent_error():
+    """4xx status from crawled page raises PermanentFetchError."""
+    mock_crawler = AsyncMock()
+    mock_crawler.arun.return_value = _mock_crawl_result(status_code=403)
+
+    fetcher = Crawl4AiFetcher(crawler=mock_crawler)
+    with pytest.raises(PermanentFetchError) as exc_info:
+        await fetcher.fetch("https://example.com")
+
+    assert exc_info.value.status_code == 403
+
+
+async def test_fetch_5xx_raises_runtime_error():
+    """5xx status from crawled page raises RuntimeError (retryable)."""
+    mock_crawler = AsyncMock()
+    mock_crawler.arun.return_value = _mock_crawl_result(status_code=500)
+
+    fetcher = Crawl4AiFetcher(crawler=mock_crawler)
+    with pytest.raises(RuntimeError, match="server error 500"):
         await fetcher.fetch("https://example.com")

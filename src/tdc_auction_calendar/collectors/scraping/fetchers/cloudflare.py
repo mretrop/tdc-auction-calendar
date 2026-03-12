@@ -32,8 +32,12 @@ class CloudflareFetcher:
         connect_timeout: float = 30.0,
         read_timeout: float = 60.0,
     ) -> None:
-        self._account_id = account_id or os.environ["CLOUDFLARE_ACCOUNT_ID"]
-        self._api_token = api_token or os.environ["CLOUDFLARE_API_TOKEN"]
+        self._account_id = account_id or os.environ.get("CLOUDFLARE_ACCOUNT_ID")
+        self._api_token = api_token or os.environ.get("CLOUDFLARE_API_TOKEN")
+        if not self._account_id:
+            raise ValueError("CLOUDFLARE_ACCOUNT_ID is required (pass account_id or set env var)")
+        if not self._api_token:
+            raise ValueError("CLOUDFLARE_API_TOKEN is required (pass api_token or set env var)")
         self._http = httpx.AsyncClient(
             timeout=httpx.Timeout(connect=connect_timeout, read=read_timeout, write=30.0, pool=30.0),
             headers={"Authorization": f"Bearer {self._api_token}"},
