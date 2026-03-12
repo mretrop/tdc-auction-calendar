@@ -1,6 +1,7 @@
 """Tests for the statutory baseline collector."""
 
 import datetime
+import json
 import time
 
 import pytest
@@ -8,6 +9,8 @@ import pytest
 from tdc_auction_calendar.collectors.statutory import StatutoryCollector
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SaleType, SourceType
+
+import tdc_auction_calendar.collectors.statutory.state_statutes as _stat_mod
 
 
 class TestNormalize:
@@ -183,9 +186,7 @@ class TestEdgeCases:
         ]
         fake_vendors: list = []
 
-        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
-
-        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
         collector = StatutoryCollector()
         auctions = await collector.collect()
         assert all(a.state != "XX" for a in auctions)
@@ -204,9 +205,7 @@ class TestEdgeCases:
         ]
         fake_vendors: list = []
 
-        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
-
-        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
         collector = StatutoryCollector()
         auctions = await collector.collect()
         assert all(a.state != "XX" for a in auctions)
@@ -228,9 +227,7 @@ class TestIsolatedFetchLogic:
         ]
         fake_vendors: list = []
 
-        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
-
-        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
         collector = StatutoryCollector(skip_states={"AA"})
         auctions = await collector.collect()
         assert all(a.state != "AA" for a in auctions)
@@ -247,9 +244,7 @@ class TestIsolatedFetchLogic:
         ]
         fake_vendors: list = []
 
-        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
-
-        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
         collector = StatutoryCollector(skip_counties={("AA", "Alpha")})
         auctions = await collector.collect()
         assert all(a.county != "Alpha" for a in auctions)
@@ -267,9 +262,7 @@ class TestIsolatedFetchLogic:
             {"state": "AA", "county": "Alpha", "vendor": "TestVendor", "portal_url": "https://example.com"},
         ]
 
-        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
-
-        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
         collector = StatutoryCollector()
         auctions = await collector.collect()
         assert all(a.vendor == "TestVendor" for a in auctions)
@@ -287,9 +280,7 @@ class TestIsolatedFetchLogic:
             {"state": "AA", "county": "Alpha", "vendor": "NoPortalVendor"},
         ]
 
-        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
-
-        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
         collector = StatutoryCollector()
         auctions = await collector.collect()
         assert all(a.vendor == "NoPortalVendor" for a in auctions)
@@ -305,9 +296,7 @@ class TestIsolatedFetchLogic:
         ]
         fake_vendors: list = []
 
-        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
-
-        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
         collector = StatutoryCollector()
         auctions = await collector.collect()
         assert all(a.sale_type == SaleType.LIEN for a in auctions)
@@ -323,10 +312,42 @@ class TestIsolatedFetchLogic:
         ]
         fake_vendors: list = []
 
-        import tdc_auction_calendar.collectors.statutory.state_statutes as mod
-
-        monkeypatch.setattr(mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
         collector = StatutoryCollector()
         auctions = await collector.collect()
         assert len(auctions) > 0
         assert all(a.county == "Good" for a in auctions)
+
+    @pytest.mark.asyncio
+    async def test_missing_sale_type_skipped(self, monkeypatch):
+        """States with sale_type=None produce zero auctions for that state."""
+        fake_states = [
+            {"state": "XX", "sale_type": None, "typical_months": [6]},
+            {"state": "YY", "sale_type": "lien", "typical_months": [6]},
+        ]
+        fake_counties = [
+            {"state": "XX", "county_name": "FakeCounty"},
+            {"state": "YY", "county_name": "TestCounty"},
+        ]
+        fake_vendors: list = []
+
+        monkeypatch.setattr(_stat_mod, "_load_seed_files", lambda: (fake_states, fake_counties, fake_vendors))
+        collector = StatutoryCollector()
+        auctions = await collector.collect()
+        assert all(a.state != "XX" for a in auctions)
+        assert any(a.state == "YY" for a in auctions)
+
+
+class TestLoadSeedFiles:
+    """Tests for _load_seed_files() error handling."""
+
+    def test_missing_seed_file_raises(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(_stat_mod, "SEED_DIR", tmp_path)
+        with pytest.raises(FileNotFoundError):
+            _stat_mod._load_seed_files()
+
+    def test_corrupt_seed_file_raises(self, monkeypatch, tmp_path):
+        (tmp_path / "states.json").write_text("not json")
+        monkeypatch.setattr(_stat_mod, "SEED_DIR", tmp_path)
+        with pytest.raises(json.JSONDecodeError):
+            _stat_mod._load_seed_files()

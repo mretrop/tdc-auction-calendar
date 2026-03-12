@@ -57,7 +57,12 @@ class StatutoryCollector(BaseCollector):
 
         vendor_index: dict[tuple[str, str], dict] = {}
         for v in vendors:
-            vendor_index[(v["state"], v["county"])] = v
+            v_state = v.get("state")
+            v_county = v.get("county")
+            if not v_state or not v_county:
+                logger.warning("statutory_skip_vendor_missing_key", vendor_record=v)
+                continue
+            vendor_index[(v_state, v_county)] = v
 
         today = date.today()
         years = [today.year, today.year + 1]
@@ -70,7 +75,7 @@ class StatutoryCollector(BaseCollector):
                 continue
             typical_months = rules.get("typical_months")
             if not typical_months:
-                logger.debug("statutory_skip_state_no_months", state=state_code)
+                logger.warning("statutory_skip_state_no_months", state=state_code)
                 continue
 
             sale_type = rules.get("sale_type")
@@ -78,7 +83,7 @@ class StatutoryCollector(BaseCollector):
                 logger.warning("statutory_skip_state_no_sale_type", state=state_code)
                 continue
 
-            state_counties = [c for c in counties if c["state"] == state_code]
+            state_counties = [c for c in counties if c.get("state") == state_code]
 
             for county in state_counties:
                 county_name = county.get("county_name")
@@ -100,7 +105,14 @@ class StatutoryCollector(BaseCollector):
                             "sale_type": sale_type,
                         }
                         if vendor_info:
-                            raw["vendor"] = vendor_info.get("vendor")
+                            vendor_name = vendor_info.get("vendor")
+                            if not vendor_name:
+                                logger.warning(
+                                    "statutory_vendor_missing_name",
+                                    state=state_code,
+                                    county=county_name,
+                                )
+                            raw["vendor"] = vendor_name
                             raw["portal_url"] = vendor_info.get("portal_url")
                         auctions.append(self.normalize(raw))
 
