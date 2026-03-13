@@ -103,11 +103,15 @@ def export_ical(
 
     ical_bytes = auctions_to_ical(auctions)
 
-    if output:
-        with open(output, "wb") as f:
-            f.write(ical_bytes)
-    else:
-        sys.stdout.buffer.write(ical_bytes)
+    try:
+        if output:
+            with open(output, "wb") as f:
+                f.write(ical_bytes)
+        else:
+            sys.stdout.buffer.write(ical_bytes)
+    except (OSError, BrokenPipeError) as exc:
+        console.print(f"[red]Failed to write output:[/red] {exc}")
+        raise typer.Exit(1)
 
     typer.echo(f"Exported {len(auctions)} auction(s).", err=True)
 
