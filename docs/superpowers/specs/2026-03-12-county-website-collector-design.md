@@ -10,9 +10,10 @@ A single collector that iterates counties with `tax_sale_page_url` populated in 
 ## Decisions
 
 - **Single generic extraction schema** for all counties (no per-county configs). The LLM handles HTML variance.
-- **Failure handling:** Log warning and skip failed counties. No fallback to statutory data — the statutory collector runs separately.
+- **Failure handling:** Log warning and skip failed counties. The statutory collector runs separately and naturally fills gaps — no explicit fallback logic needed in this collector. The orchestrator (issue #15) handles source merging/prioritization. This satisfies the issue's "graceful fallback" criterion: the system as a whole falls back to statutory data, but each collector has a single responsibility.
 - **URL population:** Populate ~50+ real `tax_sale_page_url` values in `counties.json` for states with existing collectors (FL, PA, NC, SC, MN, UT, NJ, CO, CA, AR, IA).
-- **Serial iteration** with per-domain rate limiting. Concurrency deferred to orchestrator (issue #15).
+- **Serial iteration** with per-domain rate limiting (handled automatically by `ScrapeClient`'s built-in `RateLimiter`). Concurrency deferred to orchestrator (issue #15).
+- **LLM schema extraction** (not `json_options`): County pages have the most HTML variance, so `schema=CountyAuctionRecord` with Claude API extraction is the right choice over Cloudflare's server-side `json_options`.
 
 ## Files
 
@@ -39,13 +40,15 @@ A single collector that iterates counties with `tax_sale_page_url` populated in 
 class CountyAuctionRecord(BaseModel):
     """Schema for extraction from a single county's tax sale page."""
     sale_date: str              # ISO YYYY-MM-DD
-    sale_type: str = ""         # lien/deed/hybrid; empty falls back to county's known type
+    sale_type: str = ""         # lien/deed/hybrid; empty falls back to state's default
     end_date: str | None = None
-    deposit_amount: str | None = None
+    deposit_amount: str | None = None  # numeric string, no currency symbols
     registration_deadline: str | None = None
 ```
 
 County and state are NOT extracted — they come from the seed data since we already know which county page we're scraping.
+
+The extraction prompt instructs the LLM to return `deposit_amount` as a plain numeric string (no `$` or commas) to simplify Decimal conversion.
 
 ## Collector Design
 
@@ -54,36 +57,50 @@ class CountyWebsiteCollector(BaseCollector):
     """Scrapes individual county tax sale pages for auction dates."""
 
     confidence_score: float = 0.70
-    source_type = SourceType.COUNTY_WEBSITE
 
     _EXTRACTION_PROMPT = (
         "Extract tax sale / tax lien sale / tax deed sale auction information "
         "from this county page. For each upcoming sale, extract: sale date "
         "(ISO YYYY-MM-DD), sale type (lien, deed, or hybrid), end date if "
-        "listed, deposit amount, and registration deadline."
+        "listed, deposit amount (numeric only, no $ or commas), and "
+        "registration deadline (ISO YYYY-MM-DD)."
     )
+
+    @property
+    def name(self) -> str:
+        return "county_website"
+
+    @property
+    def source_type(self) -> SourceType:
+        return SourceType.COUNTY_WEBSITE
 ```
 
 ### Init
 
-- Load counties from seed data (read `counties.json` directly via `SEED_DIR`)
+- Load both `counties.json` and `states.json` from `SEED_DIR`
+- Join on `state_code` to get each county's default `sale_type` from its state record
 - Filter to counties where `tax_sale_page_url` is not null
-- Store as list of dicts with `state_code`, `county_name`, `tax_sale_page_url`, `sale_type` (for fallback)
+- Store as list of `_CountyTarget` dicts: `state_code`, `county_name`, `tax_sale_page_url`, `default_sale_type`
 
 ### _fetch() loop
 
 ```
-for each county with tax_sale_page_url:
-    try:
-        result = client.scrape(url, schema=CountyAuctionRecord)
-        normalize result.data → Auction objects
-        - state/county from seed data
-        - sale_type from extraction, or fall back to county's known sale_type
-        - filter out past dates
-        append to all_auctions
-    except Exception:
-        log warning (county, state, url)
-        continue
+client = create_scrape_client()
+try:
+    for each county_target:
+        try:
+            result = client.scrape(url, schema=CountyAuctionRecord)
+            validate result.data type (list/dict/None)
+            normalize each record → Auction
+            - state/county from county_target
+            - sale_type from extraction, or fall back to county_target.default_sale_type
+            - filter out past dates
+            append to all_auctions
+        except Exception:
+            log warning (county, state, url)
+            continue
+finally:
+    client.close()
 
 return all_auctions
 ```
@@ -91,19 +108,28 @@ return all_auctions
 Key differences from other collectors:
 - **No "all failed" raise** — partial results are fine since each county is independent
 - **State/county come from seed data**, not extraction
-- **Sale type fallback** uses the county's known `sale_type` from seed data (via state's `default_sale_type`)
+- **Sale type fallback** uses the state's default `sale_type` from seed data
+- **One ScrapeClient** shared across all county scrapes (created once, closed in finally)
 
 ### normalize()
 
+The `BaseCollector` ABC requires `normalize(self, raw: dict) -> Auction`. Since this collector needs county context during normalization, the approach is:
+
+- `normalize()` is not used directly — `_fetch()` calls `_normalize_record()` with county context
+- `normalize()` is implemented to satisfy the ABC but raises `NotImplementedError` (it should never be called without county context)
+
 ```python
-def _normalize_record(self, raw: dict, county_info: dict) -> Auction:
+def normalize(self, raw: dict) -> Auction:
+    raise NotImplementedError("Use _normalize_record() with county_target context")
+
+def _normalize_record(self, raw: dict, county_target: dict) -> Auction:
     return Auction(
-        state=county_info["state_code"],
-        county=county_info["county_name"],
+        state=county_target["state_code"],
+        county=county_target["county_name"],
         start_date=date.fromisoformat(raw["sale_date"]),
-        sale_type=SaleType(raw.get("sale_type") or county_info["default_sale_type"]),
+        sale_type=SaleType(raw.get("sale_type") or county_target["default_sale_type"]),
         source_type=SourceType.COUNTY_WEBSITE,
-        source_url=county_info["tax_sale_page_url"],
+        source_url=county_target["tax_sale_page_url"],
         confidence_score=self.confidence_score,
         end_date=date.fromisoformat(raw["end_date"]) if raw.get("end_date") else None,
         deposit_amount=Decimal(raw["deposit_amount"]) if raw.get("deposit_amount") else None,
@@ -148,7 +174,7 @@ Focus on counties already in `counties.json` that have active tax sales. URLs sh
 | `test_fetch_filters_past_dates` | Past dates are excluded |
 | `test_fetch_empty_urls_returns_empty` | No populated URLs → empty list |
 | `test_normalize_uses_seed_county_info` | State/county come from seed, not extraction |
-| `test_normalize_falls_back_sale_type` | Empty/missing sale_type uses county's default |
+| `test_normalize_falls_back_sale_type` | Empty/missing sale_type uses state's default |
 | `test_normalize_optional_fields` | end_date, deposit_amount, registration_deadline handled |
 | `test_closes_client_on_failure` | client.close() called even on exception |
 | `test_acceptance_50_counties` | Fixture produces >= 50 county records |
