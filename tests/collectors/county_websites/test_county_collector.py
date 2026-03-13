@@ -242,3 +242,30 @@ async def test_closes_client_on_failure():
 
     assert auctions == []
     mock_client.close.assert_called_once()
+
+
+# --- Acceptance test ---
+
+async def test_acceptance_50_counties(collector):
+    """Integration: fixture data should produce >= 50 county auction records."""
+    fixture_path = FIXTURES_DIR / "county_extraction_results.json"
+    with open(fixture_path) as f:
+        fixture_data = json.load(f)
+
+    def _side_effect(url, **kwargs):
+        data = fixture_data.get(url)
+        return _mock_scrape_result(data, url=url)
+
+    mock_client = AsyncMock()
+    mock_client.scrape.side_effect = _side_effect
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.county_websites.county_collector.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) >= 50
+    assert all(a.source_type == SourceType.COUNTY_WEBSITE for a in auctions)
+    assert all(a.confidence_score == 0.70 for a in auctions)

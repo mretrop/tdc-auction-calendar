@@ -1,4 +1,5 @@
 from tdc_auction_calendar.collectors.base import BaseCollector
+from tdc_auction_calendar.collectors.county_websites import CountyWebsiteCollector
 from tdc_auction_calendar.collectors.public_notices import (
     FloridaCollector,
     MinnesotaCollector,
@@ -21,6 +22,7 @@ __all__ = [
     "BaseCollector",
     "CaliforniaCollector",
     "ColoradoCollector",
+    "CountyWebsiteCollector",
     "FloridaCollector",
     "IowaCollector",
     "MinnesotaCollector",
