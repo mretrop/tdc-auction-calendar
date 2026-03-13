@@ -109,3 +109,126 @@ async def test_fetch_omits_js_code_when_none(mock_crawler):
     call_kwargs = mock_crawler.arun.call_args
     assert "js_code" not in call_kwargs[1]
     assert "wait_for" not in call_kwargs[1]
+
+
+# --- Gap-fill tests: _get_crawler() lazy init ---
+
+
+async def test_get_crawler_import_error():
+    """Missing crawl4ai package raises RuntimeError."""
+    fetcher = Crawl4AiFetcher()  # no crawler injected
+
+    with patch.dict("sys.modules", {"crawl4ai": None}):
+        with pytest.raises(RuntimeError, match="crawl4ai is required"):
+            await fetcher.fetch("https://example.com")
+
+
+async def test_get_crawler_browser_init_failure():
+    """Failed browser init raises RuntimeError with setup hint."""
+    mock_module = MagicMock()
+    mock_crawler_instance = MagicMock()
+    mock_crawler_instance.__aenter__ = AsyncMock(side_effect=OSError("no browser"))
+    mock_module.AsyncWebCrawler.return_value = mock_crawler_instance
+
+    fetcher = Crawl4AiFetcher()
+
+    with patch.dict("sys.modules", {"crawl4ai": mock_module}):
+        with pytest.raises(RuntimeError, match="Failed to initialize headless browser"):
+            await fetcher.fetch("https://example.com")
+
+
+async def test_get_crawler_lazy_creates_once():
+    """Lazy init creates crawler on first call, reuses on second."""
+    mock_module = MagicMock()
+    mock_crawler_instance = MagicMock()
+    mock_crawler_instance.__aenter__ = AsyncMock(return_value=mock_crawler_instance)
+    mock_crawler_instance.arun = AsyncMock(return_value=_mock_crawl_result())
+    mock_module.AsyncWebCrawler.return_value = mock_crawler_instance
+
+    fetcher = Crawl4AiFetcher()
+
+    with patch.dict("sys.modules", {"crawl4ai": mock_module}):
+        await fetcher.fetch("https://example.com")
+        await fetcher.fetch("https://example.com/page2")
+
+    # AsyncWebCrawler() called only once
+    assert mock_module.AsyncWebCrawler.call_count == 1
+
+
+# --- Gap-fill tests: generic exception wrapping ---
+
+
+async def test_fetch_wraps_generic_exception():
+    """Non-OSError/RuntimeError exceptions are wrapped in RuntimeError."""
+    mock_crawler = AsyncMock()
+    mock_crawler.arun.side_effect = ValueError("unexpected")
+
+    fetcher = Crawl4AiFetcher(crawler=mock_crawler)
+    with pytest.raises(RuntimeError, match="Crawl4AI failed for"):
+        await fetcher.fetch("https://example.com")
+
+
+# --- Gap-fill tests: missing status_code ---
+
+
+async def test_fetch_missing_status_code_defaults_to_200():
+    """Result without status_code attribute defaults to 200."""
+    mock_crawler = AsyncMock()
+    result = MagicMock(spec=[])  # empty spec = no attributes
+    result.html = "<h1>Sale</h1>"
+    result.markdown = "# Sale"
+    # no status_code attribute at all
+    mock_crawler.arun.return_value = result
+
+    fetcher = Crawl4AiFetcher(crawler=mock_crawler)
+    fetch_result = await fetcher.fetch("https://example.com")
+
+    assert fetch_result.status_code == 200
+
+
+async def test_fetch_none_status_code_defaults_to_200():
+    """Result with status_code=None defaults to 200."""
+    mock_crawler = AsyncMock()
+    mock_crawler.arun.return_value = _mock_crawl_result(status_code=None)
+
+    fetcher = Crawl4AiFetcher(crawler=mock_crawler)
+    fetch_result = await fetcher.fetch("https://example.com")
+
+    assert fetch_result.status_code == 200
+
+
+# --- Gap-fill tests: close() ---
+
+
+async def test_close_owned_crawler():
+    """close() calls __aexit__ on crawler we own."""
+    mock_module = MagicMock()
+    mock_crawler_instance = MagicMock()
+    mock_crawler_instance.__aenter__ = AsyncMock(return_value=mock_crawler_instance)
+    mock_crawler_instance.__aexit__ = AsyncMock()
+    mock_crawler_instance.arun = AsyncMock(return_value=_mock_crawl_result())
+    mock_module.AsyncWebCrawler.return_value = mock_crawler_instance
+
+    fetcher = Crawl4AiFetcher()
+
+    with patch.dict("sys.modules", {"crawl4ai": mock_module}):
+        await fetcher.fetch("https://example.com")
+
+    await fetcher.close()
+    mock_crawler_instance.__aexit__.assert_called_once()
+    assert fetcher._crawler is None
+
+
+async def test_close_injected_crawler_is_noop():
+    """close() does not close an injected crawler."""
+    mock_crawler = AsyncMock()
+    fetcher = Crawl4AiFetcher(crawler=mock_crawler)
+
+    await fetcher.close()
+    mock_crawler.__aexit__.assert_not_called()
+
+
+async def test_close_without_init_is_noop():
+    """close() before any fetch is a safe no-op."""
+    fetcher = Crawl4AiFetcher()
+    await fetcher.close()  # should not raise
