@@ -29,11 +29,25 @@ Each auction becomes one VEVENT:
 
 | iCal Field | Source |
 |---|---|
-| SUMMARY | `"{county} {state} Tax {sale_type} Sale"` (title-cased sale_type) |
+| SUMMARY | `"{county} {state} Tax {sale_type} Sale"` (title-cased sale_type, e.g., `"Miami-Dade FL Tax Deed Sale"`) |
 | DTSTART / DTEND | All-day events using `date` values. If `end_date` is null, DTEND = `start_date + 1 day` |
-| UID | Deterministic: `{state}-{county}-{start_date}-{sale_type}@tdc-auction-calendar` |
-| DESCRIPTION | Human-readable text with deposit amount, registration deadline, property count, source URL (only non-null fields) |
+| UID | Deterministic: `{state}-{county}-{start_date}-{sale_type}@tdc-auction-calendar` (mirrors DB dedup key) |
+| DESCRIPTION | See Description Format below |
 | URL | `source_url` if present, otherwise omitted |
+
+### Description Format
+
+Only non-null fields are included, one per line:
+
+```
+Registration deadline: 2026-04-01
+Deposit amount: $5,000.00
+Deposit deadline: 2026-04-10
+Properties: 150
+Source: https://example.com/auction
+```
+
+`deposit_amount` is formatted with `$` prefix and comma thousands separator (`${:,.2f}`). Source URL is intentionally duplicated in both DESCRIPTION and the URL property — some calendar clients don't render the URL field, so including it in the description improves visibility.
 
 ### VALARM Rules
 
@@ -43,7 +57,9 @@ Up to 3 alarms, only when the corresponding deadline field is non-null:
 - 1 day before `registration_deadline`
 - 1 day before `deposit_deadline`
 
-When a deadline is null, the corresponding VALARM(s) are skipped entirely — no fallback to `start_date`.
+**Implementation**: Use `TRIGGER;VALUE=DATE-TIME` with absolute datetime values computed from the deadline date (e.g., `registration_deadline - 7 days` at midnight UTC). This avoids the default TRIGGER behavior which is relative to DTSTART.
+
+When a deadline is null, the corresponding VALARM(s) are skipped entirely — no fallback to `start_date`. VALARMs for deadlines already in the past at generation time are still emitted — calendar clients handle past alarms gracefully, and the .ics may be generated ahead of time.
 
 ## Filtering — Shared Query Helper
 
@@ -60,6 +76,7 @@ def query_auctions(
 - Queries `AuctionRow`, applies filters, converts to Pydantic `Auction` models
 - `states` accepts a list for multi-state filtering (e.g., `["FL", "TX"]`)
 - `from_date` defaults to today if not provided (only future auctions)
+- `to_date` has no default — omitting it returns all future auctions with no upper bound
 - Returns results ordered by `start_date`
 
 This keeps the export function pure (no DB awareness) and the query logic reusable by future exporters.
@@ -79,6 +96,7 @@ def export_ical(
 ) -> None:
 ```
 
+- Checks DB exists via `_check_db_exists()` (same guard pattern as `list` command)
 - Parses dates, calls `query_auctions`, calls `auctions_to_ical`
 - Writes to file if `--output` specified, otherwise `sys.stdout.buffer.write()`
 - Prints auction count to stderr so it doesn't pollute piped output
@@ -86,7 +104,7 @@ def export_ical(
 ## Testing Strategy
 
 - **Round-trip validation**: Generate .ics bytes, parse back with `icalendar.Calendar.from_ical()`, assert events match input
-- **VALARM correctness**: Verify negative durations (`-P7D`, `-P1D`) and that alarms are only present when deadlines are set
+- **VALARM correctness**: Verify absolute `TRIGGER;VALUE=DATE-TIME` values equal `deadline - 7 days` / `deadline - 1 day` (at midnight UTC), and that alarms are only present when deadlines are set
 - **Filter tests**: Verify state, sale_type, and date range filters reduce output (using in-memory SQLite)
 - **Edge cases**: Null `end_date` (single-day), null `source_url` (no URL property), all deadlines null (no VALARMs), empty auction list (valid calendar with no events)
 
