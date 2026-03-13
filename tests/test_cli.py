@@ -39,11 +39,6 @@ class TestDbPath:
 
 
 class TestExportStubs:
-    def test_export_ical_stub(self):
-        result = runner.invoke(app, ["export", "ical"])
-        assert result.exit_code == 1
-        assert "Not yet implemented" in result.output
-
     def test_export_csv_stub(self):
         result = runner.invoke(app, ["export", "csv"])
         assert result.exit_code == 1
@@ -58,6 +53,137 @@ class TestExportStubs:
         result = runner.invoke(app, ["export", "rss"])
         assert result.exit_code == 1
         assert "Not yet implemented" in result.output
+
+
+class TestExportIcal:
+    def test_export_ical_no_db_exits_1(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'nope.db'}")
+        result = runner.invoke(app, ["export", "ical"])
+        assert result.exit_code == 1
+        assert "Database not found" in result.output
+
+    def test_export_ical_empty_db_produces_valid_ics(self, cli_db):
+        result = runner.invoke(app, ["export", "ical"])
+        assert result.exit_code == 0
+        assert b"BEGIN:VCALENDAR" in result.output_bytes
+
+    def test_export_ical_includes_auction(self, cli_db):
+        with SASession(cli_db) as session:
+            session.add(AuctionRow(
+                state="FL", county="Miami-Dade",
+                start_date=_future_date(),
+                sale_type="deed", status="upcoming",
+                source_type="statutory", confidence_score=1.0,
+            ))
+            session.commit()
+
+        result = runner.invoke(app, ["export", "ical"])
+        assert result.exit_code == 0
+        assert b"Miami-Dade FL Tax Deed Sale" in result.output_bytes
+
+    def test_export_ical_filters_by_state(self, cli_db):
+        with SASession(cli_db) as session:
+            session.add(AuctionRow(
+                state="FL", county="Miami-Dade",
+                start_date=_future_date(),
+                sale_type="deed", status="upcoming",
+                source_type="statutory", confidence_score=1.0,
+            ))
+            session.add(AuctionRow(
+                state="TX", county="Harris",
+                start_date=_future_date(days=400),
+                sale_type="deed", status="upcoming",
+                source_type="statutory", confidence_score=1.0,
+            ))
+            session.commit()
+
+        result = runner.invoke(app, ["export", "ical", "--state", "FL"])
+        assert b"Miami-Dade" in result.output_bytes
+        assert b"Harris" not in result.output_bytes
+
+    def test_export_ical_filters_by_sale_type(self, cli_db):
+        with SASession(cli_db) as session:
+            session.add(AuctionRow(
+                state="FL", county="Miami-Dade",
+                start_date=_future_date(),
+                sale_type="deed", status="upcoming",
+                source_type="statutory", confidence_score=1.0,
+            ))
+            session.add(AuctionRow(
+                state="FL", county="Broward",
+                start_date=_future_date(days=400),
+                sale_type="lien", status="upcoming",
+                source_type="statutory", confidence_score=1.0,
+            ))
+            session.commit()
+
+        result = runner.invoke(app, ["export", "ical", "--sale-type", "lien"])
+        assert b"Broward" in result.output_bytes
+        assert b"Miami-Dade" not in result.output_bytes
+
+    def test_export_ical_output_to_file(self, cli_db, tmp_path):
+        with SASession(cli_db) as session:
+            session.add(AuctionRow(
+                state="FL", county="Miami-Dade",
+                start_date=_future_date(),
+                sale_type="deed", status="upcoming",
+                source_type="statutory", confidence_score=1.0,
+            ))
+            session.commit()
+
+        out_file = tmp_path / "auctions.ics"
+        result = runner.invoke(app, ["export", "ical", "--output", str(out_file)])
+        assert result.exit_code == 0
+        content = out_file.read_bytes()
+        assert b"BEGIN:VCALENDAR" in content
+        assert b"Miami-Dade" in content
+
+    def test_export_ical_invalid_date_format_exits_1(self, cli_db):
+        result = runner.invoke(app, ["export", "ical", "--from-date", "not-a-date"])
+        assert result.exit_code == 1
+        assert "Invalid date format" in result.output
+
+    def test_export_ical_from_date_includes_past(self, cli_db):
+        past = _past_date(days=10)
+        with SASession(cli_db) as session:
+            session.add(AuctionRow(
+                state="FL", county="Miami-Dade",
+                start_date=past,
+                sale_type="deed", status="completed",
+                source_type="statutory", confidence_score=1.0,
+            ))
+            session.commit()
+
+        # Without --from-date, the past auction is excluded
+        result = runner.invoke(app, ["export", "ical"])
+        assert b"Miami-Dade" not in result.output_bytes
+
+        # With --from-date before the auction, it appears
+        result = runner.invoke(app, ["export", "ical", "--from-date", str(past - datetime.timedelta(days=1))])
+        assert b"Miami-Dade" in result.output_bytes
+
+    def test_export_ical_to_date_limits_range(self, cli_db):
+        near = _future_date(days=30)
+        far = _future_date(days=400)
+        with SASession(cli_db) as session:
+            session.add(AuctionRow(
+                state="FL", county="Miami-Dade",
+                start_date=near,
+                sale_type="deed", status="upcoming",
+                source_type="statutory", confidence_score=1.0,
+            ))
+            session.add(AuctionRow(
+                state="TX", county="Harris",
+                start_date=far,
+                sale_type="deed", status="upcoming",
+                source_type="statutory", confidence_score=1.0,
+            ))
+            session.commit()
+
+        cutoff = near + datetime.timedelta(days=5)
+        result = runner.invoke(app, ["export", "ical", "--to-date", str(cutoff)])
+        assert b"Miami-Dade" in result.output_bytes
+        assert b"Harris" not in result.output_bytes
 
 
 class TestSyncStub:

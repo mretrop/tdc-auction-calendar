@@ -58,10 +58,62 @@ def _ensure_tables() -> None:
 
 
 @export_app.command("ical")
-def export_ical() -> None:
+def export_ical(
+    state: list[str] | None = typer.Option(None, "--state", help="Filter by state code (repeatable)"),
+    sale_type: SaleType | None = typer.Option(None, "--sale-type", help="Filter by sale type"),
+    from_date: str | None = typer.Option(None, "--from-date", help="Start date (YYYY-MM-DD)"),
+    to_date: str | None = typer.Option(None, "--to-date", help="End date (YYYY-MM-DD)"),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
+) -> None:
     """Export auctions to iCalendar (.ics) format."""
-    console.print("Not yet implemented. See issue #18.")
-    raise typer.Exit(1)
+    import sys
+
+    from tdc_auction_calendar.exporters.ical import auctions_to_ical, query_auctions
+
+    if not _check_db_exists():
+        console.print("[red]Database not found.[/red] Run `tdc-auction-calendar collect` first.")
+        raise typer.Exit(1)
+
+    # Parse dates
+    from_date_parsed: datetime.date | None = None
+    to_date_parsed: datetime.date | None = None
+    try:
+        if from_date:
+            from_date_parsed = datetime.date.fromisoformat(from_date)
+        if to_date:
+            to_date_parsed = datetime.date.fromisoformat(to_date)
+    except ValueError:
+        console.print(f"[red]Invalid date format.[/red] Use YYYY-MM-DD (e.g., {datetime.date.today().isoformat()}).")
+        raise typer.Exit(1)
+
+    session = get_session()
+    try:
+        auctions = query_auctions(
+            session,
+            states=state,
+            sale_type=sale_type,
+            from_date=from_date_parsed,
+            to_date=to_date_parsed,
+        )
+    except Exception as exc:
+        console.print(f"[red]Database query failed:[/red] {exc}")
+        raise typer.Exit(1)
+    finally:
+        session.close()
+
+    ical_bytes = auctions_to_ical(auctions)
+
+    try:
+        if output:
+            with open(output, "wb") as f:
+                f.write(ical_bytes)
+        else:
+            sys.stdout.buffer.write(ical_bytes)
+    except (OSError, BrokenPipeError) as exc:
+        console.print(f"[red]Failed to write output:[/red] {exc}")
+        raise typer.Exit(1)
+
+    typer.echo(f"Exported {len(auctions)} auction(s).", err=True)
 
 
 @export_app.command("csv")
