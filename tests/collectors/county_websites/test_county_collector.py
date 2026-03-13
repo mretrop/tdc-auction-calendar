@@ -44,7 +44,7 @@ def test_source_type(collector):
 
 
 def test_normalize_raises_not_implemented(collector):
-    """normalize() requires county context; callers must use _normalize_record()."""
+    """normalize() is not used; normalization requires per-county context and is handled internally by _fetch()."""
     with pytest.raises(NotImplementedError):
         collector.normalize({"sale_date": "2026-06-15"})
 
@@ -234,6 +234,41 @@ async def test_fetch_single_dict_result():
     assert len(auctions) == 1
 
 
+async def test_fetch_none_data_returns_empty():
+    """result.data=None should be treated as no results for that county."""
+    collector = _make_collector_with_targets(_TEST_TARGETS[:1])
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(None)
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.county_websites.county_collector.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert auctions == []
+
+
+async def test_fetch_skips_bad_deposit_amount():
+    """Non-numeric deposit_amount should be skipped without crashing."""
+    collector = _make_collector_with_targets(_TEST_TARGETS[:1])
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result([
+        {"sale_date": "2026-06-15", "sale_type": "lien", "deposit_amount": "N/A"},
+        {"sale_date": "2026-06-15", "sale_type": "lien"},
+    ])
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.county_websites.county_collector.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) == 1
+
+
 async def test_closes_client_on_failure():
     collector = _make_collector_with_targets(_TEST_TARGETS[:1])
     mock_client = AsyncMock()
@@ -253,7 +288,7 @@ async def test_closes_client_on_failure():
 # --- Acceptance test ---
 
 async def test_acceptance_50_counties(collector):
-    """Integration: fixture data should produce >= 50 county auction records."""
+    """Acceptance: fixture data covering real county URLs should produce >= 50 auction records."""
     fixture_path = FIXTURES_DIR / "county_extraction_results.json"
     with open(fixture_path) as f:
         fixture_data = json.load(f)
@@ -266,10 +301,17 @@ async def test_acceptance_50_counties(collector):
     mock_client.scrape.side_effect = _side_effect
     mock_client.close = AsyncMock()
 
-    with patch(
-        "tdc_auction_calendar.collectors.county_websites.county_collector.create_scrape_client",
-        return_value=mock_client,
+    with (
+        patch(
+            "tdc_auction_calendar.collectors.county_websites.county_collector.create_scrape_client",
+            return_value=mock_client,
+        ),
+        patch(
+            "tdc_auction_calendar.collectors.county_websites.county_collector.date",
+        ) as mock_date,
     ):
+        mock_date.today.return_value = date(2026, 1, 1)
+        mock_date.fromisoformat = date.fromisoformat
         auctions = await collector.collect()
 
     assert len(auctions) >= 50

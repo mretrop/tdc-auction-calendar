@@ -19,7 +19,11 @@ logger = structlog.get_logger()
 
 
 class CountyAuctionRecord(BaseModel):
-    """Schema for extraction from a single county's tax sale page."""
+    """Raw extraction schema from a county tax sale page.
+
+    All fields are strings because parsing/validation happens during
+    normalization in _normalize_record().
+    """
 
     sale_date: str
     sale_type: str = ""
@@ -46,7 +50,7 @@ class CountyWebsiteCollector(BaseCollector):
 
     @staticmethod
     def _load_county_targets() -> list[dict]:
-        """Load counties with tax_sale_page_url from seed data, joined with state sale_type."""
+        """Load counties that have a tax_sale_page_url, enriched with the state's default sale_type."""
         with open(SEED_DIR / "counties.json") as f:
             counties = json.load(f)
         with open(SEED_DIR / "states.json") as f:
@@ -58,7 +62,14 @@ class CountyWebsiteCollector(BaseCollector):
             if not url:
                 continue
             state_code = county["state"]
-            state_info = states.get(state_code, {})
+            state_info = states.get(state_code)
+            if state_info is None:
+                logger.warning(
+                    "county_state_not_found",
+                    state=state_code,
+                    county=county["county_name"],
+                )
+                continue
             targets.append({
                 "state_code": state_code,
                 "county_name": county["county_name"],
@@ -68,7 +79,10 @@ class CountyWebsiteCollector(BaseCollector):
         return targets
 
     def normalize(self, raw: dict) -> Auction:
-        raise NotImplementedError("Use _normalize_record() with county_target context")
+        raise NotImplementedError(
+            "CountyWebsiteCollector requires per-county context; "
+            "normalization is handled internally by _fetch()"
+        )
 
     def _normalize_record(self, raw: dict, county_target: dict) -> Auction:
         """Convert a raw extraction record into a validated Auction."""
@@ -96,25 +110,36 @@ class CountyWebsiteCollector(BaseCollector):
         try:
             all_auctions: list[Auction] = []
             today = date.today()
+            scrape_failed = 0
             for target in self._county_targets:
                 url = target["tax_sale_page_url"]
                 try:
                     result = await client.scrape(
                         url, schema=CountyAuctionRecord,
                     )
-                except Exception:
-                    logger.warning(
+                except Exception as exc:
+                    scrape_failed += 1
+                    logger.error(
                         "county_scrape_failed",
                         collector=self.name,
                         state=target["state_code"],
                         county=target["county_name"],
                         url=url,
+                        error=str(exc),
+                        error_type=type(exc).__name__,
                     )
                     continue
 
                 if isinstance(result.data, list):
                     raw_records = result.data
                 elif result.data is None:
+                    logger.warning(
+                        "county_extraction_returned_none",
+                        collector=self.name,
+                        state=target["state_code"],
+                        county=target["county_name"],
+                        url=url,
+                    )
                     raw_records = []
                 elif isinstance(result.data, dict):
                     raw_records = [result.data]
@@ -128,13 +153,6 @@ class CountyWebsiteCollector(BaseCollector):
                     continue
 
                 if not raw_records:
-                    logger.info(
-                        "county_no_results",
-                        collector=self.name,
-                        state=target["state_code"],
-                        county=target["county_name"],
-                        url=url,
-                    )
                     continue
 
                 for raw in raw_records:
@@ -153,6 +171,17 @@ class CountyWebsiteCollector(BaseCollector):
                             error=str(exc),
                             error_type=type(exc).__name__,
                         )
+
+            succeeded = len(self._county_targets) - scrape_failed
+            if scrape_failed:
+                logger.error(
+                    "county_collection_summary",
+                    collector=self.name,
+                    total_targets=len(self._county_targets),
+                    succeeded=succeeded,
+                    failed=scrape_failed,
+                    auctions_found=len(all_auctions),
+                )
 
             return all_auctions
         finally:
