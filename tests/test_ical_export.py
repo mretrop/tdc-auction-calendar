@@ -124,3 +124,77 @@ class TestDescriptionAndUrl:
         cal = Calendar.from_ical(auctions_to_ical([auction]))
         event = [c for c in cal.walk() if c.name == "VEVENT"][0]
         assert "URL" not in event
+
+
+class TestValarms:
+    def test_registration_deadline_produces_two_alarms(self):
+        auction = _make_auction(
+            registration_deadline=datetime.date(2027, 4, 1),
+            deposit_deadline=None,
+        )
+        cal = Calendar.from_ical(auctions_to_ical([auction]))
+        event = [c for c in cal.walk() if c.name == "VEVENT"][0]
+        alarms = [c for c in event.walk() if c.name == "VALARM"]
+        assert len(alarms) == 2
+
+    def test_registration_alarm_trigger_values(self):
+        auction = _make_auction(
+            registration_deadline=datetime.date(2027, 4, 1),
+            deposit_deadline=None,
+        )
+        cal = Calendar.from_ical(auctions_to_ical([auction]))
+        event = [c for c in cal.walk() if c.name == "VEVENT"][0]
+        alarms = [c for c in event.walk() if c.name == "VALARM"]
+        triggers = sorted([a["TRIGGER"].dt for a in alarms])
+        expected_7d = datetime.datetime(2027, 3, 25, 0, 0, tzinfo=datetime.timezone.utc)
+        expected_1d = datetime.datetime(2027, 3, 31, 0, 0, tzinfo=datetime.timezone.utc)
+        assert triggers == [expected_7d, expected_1d]
+
+    def test_deposit_deadline_produces_one_alarm(self):
+        auction = _make_auction(
+            registration_deadline=None,
+            deposit_deadline=datetime.date(2027, 4, 10),
+        )
+        cal = Calendar.from_ical(auctions_to_ical([auction]))
+        event = [c for c in cal.walk() if c.name == "VEVENT"][0]
+        alarms = [c for c in event.walk() if c.name == "VALARM"]
+        assert len(alarms) == 1
+
+    def test_deposit_alarm_trigger_value(self):
+        auction = _make_auction(
+            registration_deadline=None,
+            deposit_deadline=datetime.date(2027, 4, 10),
+        )
+        cal = Calendar.from_ical(auctions_to_ical([auction]))
+        event = [c for c in cal.walk() if c.name == "VEVENT"][0]
+        alarm = [c for c in event.walk() if c.name == "VALARM"][0]
+        expected = datetime.datetime(2027, 4, 9, 0, 0, tzinfo=datetime.timezone.utc)
+        assert alarm["TRIGGER"].dt == expected
+
+    def test_both_deadlines_produce_three_alarms(self):
+        auction = _make_auction(
+            registration_deadline=datetime.date(2027, 4, 1),
+            deposit_deadline=datetime.date(2027, 4, 10),
+        )
+        cal = Calendar.from_ical(auctions_to_ical([auction]))
+        event = [c for c in cal.walk() if c.name == "VEVENT"][0]
+        alarms = [c for c in event.walk() if c.name == "VALARM"]
+        assert len(alarms) == 3
+
+    def test_no_deadlines_no_alarms(self):
+        auction = _make_auction(
+            registration_deadline=None,
+            deposit_deadline=None,
+        )
+        cal = Calendar.from_ical(auctions_to_ical([auction]))
+        event = [c for c in cal.walk() if c.name == "VEVENT"][0]
+        alarms = [c for c in event.walk() if c.name == "VALARM"]
+        assert alarms == []
+
+    def test_alarm_action_is_display(self):
+        auction = _make_auction(registration_deadline=datetime.date(2027, 4, 1))
+        cal = Calendar.from_ical(auctions_to_ical([auction]))
+        event = [c for c in cal.walk() if c.name == "VEVENT"][0]
+        alarms = [c for c in event.walk() if c.name == "VALARM"]
+        for alarm in alarms:
+            assert str(alarm["ACTION"]) == "DISPLAY"

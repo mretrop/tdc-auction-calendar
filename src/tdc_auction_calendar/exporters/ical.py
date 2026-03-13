@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 
-from icalendar import Calendar, Event
+from icalendar import Alarm, Calendar, Event
 
 from tdc_auction_calendar.models.auction import Auction
 
@@ -25,6 +25,39 @@ def _build_description(auction: Auction) -> str:
     return "\n".join(lines)
 
 
+def _make_alarm(trigger_dt: datetime.datetime, description: str) -> Alarm:
+    """Create a DISPLAY VALARM with an absolute trigger time."""
+    alarm = Alarm()
+    alarm.add("action", "DISPLAY")
+    alarm.add("description", description)
+    alarm.add("trigger", trigger_dt)
+    return alarm
+
+
+def _add_alarms(event: Event, auction: Auction) -> None:
+    """Add VALARMs for registration and deposit deadlines."""
+    if auction.registration_deadline is not None:
+        reg_dt = datetime.datetime.combine(
+            auction.registration_deadline, datetime.time.min, tzinfo=datetime.timezone.utc
+        )
+        event.add_component(_make_alarm(
+            reg_dt - datetime.timedelta(days=7),
+            f"Registration in 7 days: {auction.county} {auction.state}",
+        ))
+        event.add_component(_make_alarm(
+            reg_dt - datetime.timedelta(days=1),
+            f"Registration tomorrow: {auction.county} {auction.state}",
+        ))
+    if auction.deposit_deadline is not None:
+        dep_dt = datetime.datetime.combine(
+            auction.deposit_deadline, datetime.time.min, tzinfo=datetime.timezone.utc
+        )
+        event.add_component(_make_alarm(
+            dep_dt - datetime.timedelta(days=1),
+            f"Deposit due tomorrow: {auction.county} {auction.state}",
+        ))
+
+
 def _build_event(auction: Auction) -> Event:
     """Build a VEVENT from an Auction model."""
     event = Event()
@@ -37,6 +70,7 @@ def _build_event(auction: Auction) -> Event:
         event.add("description", description)
     if auction.source_url:
         event.add("url", auction.source_url)
+    _add_alarms(event, auction)
     return event
 
 
