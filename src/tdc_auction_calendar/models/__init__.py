@@ -15,6 +15,13 @@ from tdc_auction_calendar.models.jurisdiction import (
     StateRules,
     StateRulesRow,
 )
+from tdc_auction_calendar.models.health import (
+    CollectorError,
+    CollectorHealth,
+    CollectorHealthRow,
+    RunReport,
+    UpsertResult,
+)
 from tdc_auction_calendar.models.vendor import (
     ALLOWED_VENDORS,
     VendorMapping,
@@ -27,13 +34,18 @@ __all__ = [
     "AuctionRow",
     "AuctionStatus",
     "Base",
+    "CollectorError",
+    "CollectorHealth",
+    "CollectorHealthRow",
     "CountyInfo",
     "CountyInfoRow",
     "Priority",
+    "RunReport",
     "SaleType",
     "SourceType",
     "StateRules",
     "StateRulesRow",
+    "UpsertResult",
     "Vendor",
     "VendorMapping",
     "VendorMappingRow",
