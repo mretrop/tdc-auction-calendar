@@ -95,6 +95,9 @@ def export_ical(
             from_date=from_date_parsed,
             to_date=to_date_parsed,
         )
+    except Exception as exc:
+        console.print(f"[red]Database query failed:[/red] {exc}")
+        raise typer.Exit(1)
     finally:
         session.close()
 

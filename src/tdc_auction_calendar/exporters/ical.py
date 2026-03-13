@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import datetime
 
+import structlog
 from icalendar import Alarm, Calendar, Event
 from sqlalchemy.orm import Session
 
 from tdc_auction_calendar.models.auction import Auction, AuctionRow
 from tdc_auction_calendar.models.enums import SaleType
+
+logger = structlog.get_logger()
 
 
 def _build_description(auction: Auction) -> str:
@@ -94,6 +97,13 @@ def query_auctions(
     to_date: datetime.date | None = None,
 ) -> list[Auction]:
     """Query auctions from the DB with optional filters, return Pydantic models."""
+    logger.debug(
+        "querying auctions",
+        states=states,
+        sale_type=str(sale_type) if sale_type else None,
+        from_date=str(from_date) if from_date else None,
+        to_date=str(to_date) if to_date else None,
+    )
     query = session.query(AuctionRow)
 
     if states:
@@ -108,4 +118,6 @@ def query_auctions(
         query = query.filter(AuctionRow.start_date <= to_date)
 
     rows = query.order_by(AuctionRow.start_date).all()
-    return [Auction.model_validate(r, from_attributes=True) for r in rows]
+    auctions = [Auction.model_validate(r, from_attributes=True) for r in rows]
+    logger.info("queried auctions", count=len(auctions))
+    return auctions

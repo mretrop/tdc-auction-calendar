@@ -97,7 +97,7 @@ class TestDescriptionAndUrl:
         assert "Properties: 150" in desc
         assert "Source: https://example.com/auction" in desc
 
-    def test_description_omits_null_fields(self):
+    def test_description_absent_when_all_fields_null(self):
         auction = _make_auction(
             registration_deadline=None,
             deposit_amount=None,
@@ -107,11 +107,7 @@ class TestDescriptionAndUrl:
         )
         cal = Calendar.from_ical(auctions_to_ical([auction]))
         event = [c for c in cal.walk() if c.name == "VEVENT"][0]
-        desc = str(event.get("DESCRIPTION", ""))
-        assert "Registration" not in desc
-        assert "Deposit" not in desc
-        assert "Properties" not in desc
-        assert "Source" not in desc
+        assert "DESCRIPTION" not in event
 
     def test_url_present_when_source_url_set(self):
         auction = _make_auction(source_url="https://example.com/auction")
@@ -236,6 +232,12 @@ class TestQueryAuctions:
         _insert_auction(db_session, state="FL")
         _insert_auction(db_session, state="TX", county="Harris")
         result = query_auctions(db_session, states=["FL"])
+        assert len(result) == 1
+        assert result[0].state == "FL"
+
+    def test_filter_by_state_is_case_insensitive(self, db_session):
+        _insert_auction(db_session, state="FL")
+        result = query_auctions(db_session, states=["fl"])
         assert len(result) == 1
         assert result[0].state == "FL"
 
