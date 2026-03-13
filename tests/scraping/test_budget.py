@@ -83,10 +83,10 @@ def test_budget_logger_unknown_model_null_cost(budget_path):
 
 
 def test_budget_logger_known_model_cost(budget_path):
-    """Known models compute a non-null cost estimate."""
+    """Known models compute correct cost estimate."""
     logger = BudgetLogger(path=budget_path)
     logger.log("claude-haiku-4-5-20251001", "Schema", _make_usage(1000, 100))
 
     record = json.loads(budget_path.read_text().strip())
-    assert record["estimated_cost_usd"] is not None
-    assert record["estimated_cost_usd"] > 0
+    # 1000 * $1/M + 100 * $5/M = $0.001 + $0.0005 = $0.0015
+    assert record["estimated_cost_usd"] == 0.0015

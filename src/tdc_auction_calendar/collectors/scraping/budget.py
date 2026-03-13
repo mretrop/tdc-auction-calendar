@@ -11,7 +11,7 @@ import structlog
 
 logger = structlog.get_logger()
 
-# Per-token costs in USD. Last updated: 2026-03-12.
+# Per-token costs in USD (update when Anthropic changes pricing).
 _TOKEN_COSTS: dict[str, tuple[float, float]] = {
     # (input_cost_per_token, output_cost_per_token)
     "claude-haiku-4-5-20251001": (1.00 / 1_000_000, 5.00 / 1_000_000),
