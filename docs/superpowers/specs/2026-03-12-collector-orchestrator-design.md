@@ -28,7 +28,7 @@ The collector orchestrator runs all enabled collectors sequentially, handles fai
 
 ### CollectorHealthRow (ORM) / CollectorHealth (Pydantic)
 
-Located in `models/health.py`. Follows the project convention: `Row` suffix for ORM, plain name for Pydantic.
+Located in `models/health.py`. Follows the project convention: `Row` suffix for ORM, plain name for Pydantic. `CollectorHealthRow` inherits from `Base` (imported from `models.jurisdiction`). Update `models/__init__.py` to export `CollectorHealth` and `CollectorHealthRow`.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -50,7 +50,7 @@ Returned by `run_all` and enriched by `run_and_persist`.
 | `skipped_records` | `int` | Existing had equal/higher confidence |
 | `collectors_succeeded` | `list[str]` | Names that completed |
 | `collectors_failed` | `list[CollectorError]` | Name + error for each failure |
-| `duration_seconds` | `float` | Wall-clock time for entire run |
+| `duration_seconds` | `float` | Wall-clock time for collector execution + cross-dedup (set by `run_all`, does not include DB upsert time) |
 
 ### CollectorError (Pydantic)
 
@@ -58,6 +58,7 @@ Returned by `run_all` and enriched by `run_and_persist`.
 |-------|------|
 | `name` | `str` |
 | `error` | `str` |
+| `error_type` | `str` |
 
 ### UpsertResult (Pydantic)
 
@@ -71,15 +72,27 @@ Returned by `run_all` and enriched by `run_and_persist`.
 
 ### Registry
 
-Module-level dict mapping name to class:
+Module-level dict mapping collector `.name` property to class. Uses the collector's own `name` (e.g., `"florida_public_notice"`) as the canonical key — this is the same name used in structlog events, health tracking, and CLI filtering.
 
 ```python
 COLLECTORS: dict[str, type[BaseCollector]] = {
-    "FloridaCollector": FloridaCollector,
-    "ArkansasCollector": ArkansasCollector,
-    # ... all 12 collectors
+    "florida_public_notice": FloridaCollector,
+    "minnesota_public_notice": MinnesotaCollector,
+    "new_jersey_public_notice": NewJerseyCollector,
+    "north_carolina_public_notice": NorthCarolinaCollector,
+    "pennsylvania_public_notice": PennsylvaniaCollector,
+    "south_carolina_public_notice": SouthCarolinaCollector,
+    "utah_public_notice": UtahCollector,
+    "arkansas_state_agency": ArkansasCollector,
+    "california_state_agency": CaliforniaCollector,
+    "colorado_state_agency": ColoradoCollector,
+    "iowa_state_agency": IowaCollector,
+    "county_website": CountyWebsiteCollector,
+    "statutory": StatutoryCollector,
 }
 ```
+
+All 13 collectors are registered.
 
 ### `run_all(collectors: list[str] | None = None) -> tuple[list[Auction], RunReport]`
 
@@ -94,13 +107,13 @@ COLLECTORS: dict[str, type[BaseCollector]] = {
 
 The orchestrator does NOT touch the database. It returns clean data.
 
-### `run_and_persist(session, collectors: list[str] | None = None) -> RunReport`
+### `run_and_persist(session: Session, collectors: list[str] | None = None) -> RunReport`
 
-Convenience function for callers that want the full pipeline:
+Convenience `async def` that awaits `run_all` and then calls the synchronous upsert/health functions. The DB layer remains synchronous per the existing `db/database.py` pattern (`sqlalchemy.orm.Session`, not `AsyncSession`).
 
-1. Call `run_all(collectors)` to get auctions and report.
-2. Call `upsert_auctions(session, auctions)` to persist.
-3. Call `save_collector_health(session, ...)` for each succeeded/failed collector.
+1. Call `await run_all(collectors)` to get auctions and report.
+2. Call `upsert_auctions(session, auctions)` to persist (synchronous).
+3. Call `save_collector_health(session, ...)` for each succeeded/failed collector (synchronous).
 4. Populate `new_records`, `updated_records`, `skipped_records` on the report from the `UpsertResult`.
 5. Return the enriched report.
 
@@ -112,10 +125,11 @@ For each auction:
 
 1. Query `AuctionRow` by dedup key `(state, county, start_date, sale_type)`.
 2. **No existing row:** Insert new `AuctionRow` → count as `new`.
-3. **Existing row with lower `confidence_score`:** Update all fields → count as `updated`.
+3. **Existing row with lower `confidence_score`:** Update all non-PK fields from the incoming `Auction`, including `None` values (full replacement, not merge). Timestamp columns (`created_at`) are preserved; `updated_at` is handled by SQLAlchemy's `onupdate`. Count as `updated`.
 4. **Existing row with equal/higher `confidence_score`:** Skip → count as `skipped`.
-5. Commit once at the end.
-6. Return `UpsertResult(new=N, updated=N, skipped=N)`.
+5. Flush all changes, catch `IntegrityError` on the unique constraint as a skip (defensive — shouldn't happen with sequential processing and pre-dedup, but guards against edge cases).
+6. Commit once at the end.
+7. Return `UpsertResult(new=N, updated=N, skipped=N)`.
 
 ### `save_collector_health(session, name: str, success: bool, records: int, error: str | None) -> None`
 
