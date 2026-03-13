@@ -13,6 +13,7 @@ import httpx
 import structlog
 from pydantic import BaseModel
 
+from tdc_auction_calendar.collectors.scraping.budget import BudgetLogger
 from tdc_auction_calendar.collectors.scraping.cache import ResponseCache
 from tdc_auction_calendar.collectors.scraping.extraction import (
     ExtractionStrategy,
@@ -242,7 +243,11 @@ class ScrapeClient:
     ) -> BaseModel | dict | list[dict] | None:
         """Run extraction on fetched content."""
         if extraction is None and schema is not None:
-            extraction = LLMExtraction()
+            if not os.environ.get("ANTHROPIC_API_KEY"):
+                logger.warning("llm_extraction_skipped", reason="ANTHROPIC_API_KEY not set")
+                return None
+            budget = BudgetLogger()
+            extraction = LLMExtraction(on_usage=budget.log)
 
         content = fetch_result.markdown or fetch_result.html
         if not content:
