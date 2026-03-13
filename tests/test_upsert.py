@@ -144,30 +144,16 @@ class TestUpsertAuctions:
         assert result == UpsertResult(new=0, updated=0, skipped=0)
 
 
-def _make_health(
-    name: str = "florida_public_notice",
-    *,
-    success: bool = True,
-    records: int = 0,
-    error: str | None = None,
-    now: datetime.datetime | None = None,
-) -> CollectorHealth:
-    """Build a CollectorHealth with sensible defaults."""
-    now = now or datetime.datetime.now(tz=datetime.timezone.utc)
-    return CollectorHealth(
-        collector_name=name,
-        last_run=now,
-        last_success=now if success else None,
-        records_collected=records,
-        error_message=error,
-    )
-
-
 class TestSaveCollectorHealth:
     def test_save_success(self, db_session):
         """Successful run records health."""
-        health = _make_health(records=42)
-        save_collector_health(db_session, health)
+        save_collector_health(
+            db_session,
+            name="florida_public_notice",
+            success=True,
+            records=42,
+            error=None,
+        )
 
         row = db_session.query(CollectorHealthRow).one()
         assert row.collector_name == "florida_public_notice"
@@ -177,10 +163,13 @@ class TestSaveCollectorHealth:
 
     def test_save_failure(self, db_session):
         """Failed run records error, no last_success."""
-        health = _make_health(
-            name="broken_collector", success=False, records=0, error="Connection refused"
+        save_collector_health(
+            db_session,
+            name="broken_collector",
+            success=False,
+            records=0,
+            error="Connection refused",
         )
-        save_collector_health(db_session, health)
 
         row = db_session.query(CollectorHealthRow).one()
         assert row.error_message == "Connection refused"
@@ -189,12 +178,10 @@ class TestSaveCollectorHealth:
     def test_success_after_failure_clears_error(self, db_session):
         """Success after failure clears error_message."""
         save_collector_health(
-            db_session,
-            _make_health(name="flaky", success=False, records=0, error="timeout"),
+            db_session, name="flaky", success=False, records=0, error="timeout"
         )
         save_collector_health(
-            db_session,
-            _make_health(name="flaky", success=True, records=10),
+            db_session, name="flaky", success=True, records=10, error=None
         )
 
         row = db_session.query(CollectorHealthRow).one()
@@ -202,24 +189,16 @@ class TestSaveCollectorHealth:
         assert row.records_collected == 10
         assert row.last_success is not None
 
-    def test_failure_after_success_updates_fields(self, db_session):
-        """Failure after success overwrites fields from caller."""
+    def test_failure_preserves_last_success(self, db_session):
+        """Failure after success preserves last_success and records_collected."""
         save_collector_health(
-            db_session,
-            _make_health(name="flaky", success=True, records=10),
+            db_session, name="flaky", success=True, records=10, error=None
         )
         first_success = db_session.query(CollectorHealthRow).one().last_success
 
-        # Simulate caller preserving last_success on failure
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
-        failure = CollectorHealth(
-            collector_name="flaky",
-            last_run=now,
-            last_success=first_success,
-            records_collected=10,
-            error_message="boom",
+        save_collector_health(
+            db_session, name="flaky", success=False, records=0, error="boom"
         )
-        save_collector_health(db_session, failure)
 
         row = db_session.query(CollectorHealthRow).one()
         assert row.last_success == first_success
@@ -228,20 +207,19 @@ class TestSaveCollectorHealth:
 
 
 class TestGetCollectorHealth:
-    def test_get_nonexistent(self, db_session):
-        """Returns None when no health row exists for collector."""
-        result = get_collector_health(db_session, "nonexistent")
-        assert result is None
+    def test_get_empty(self, db_session):
+        """Returns empty list when no health rows exist."""
+        result = get_collector_health(db_session)
+        assert result == []
 
-    def test_get_returns_row(self, db_session):
-        """Returns CollectorHealthRow after save."""
+    def test_get_returns_pydantic_models(self, db_session):
+        """Returns CollectorHealth Pydantic models."""
         save_collector_health(
-            db_session,
-            _make_health(name="test", success=True, records=5),
+            db_session, name="test", success=True, records=5, error=None
         )
-        result = get_collector_health(db_session, "test")
+        result = get_collector_health(db_session)
 
-        assert result is not None
-        assert isinstance(result, CollectorHealthRow)
-        assert result.collector_name == "test"
-        assert result.records_collected == 5
+        assert len(result) == 1
+        assert isinstance(result[0], CollectorHealth)
+        assert result[0].collector_name == "test"
+        assert result[0].records_collected == 5

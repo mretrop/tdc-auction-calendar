@@ -102,41 +102,50 @@ def upsert_auctions(session: Session, auctions: list[Auction]) -> UpsertResult:
 
 
 def save_collector_health(
-    session: Session, health: CollectorHealth
-) -> CollectorHealthRow:
-    """Save or update collector health record."""
-    existing = (
-        session.query(CollectorHealthRow)
-        .filter_by(collector_name=health.collector_name)
-        .first()
-    )
+    session: Session,
+    name: str,
+    success: bool,
+    records: int,
+    error: str | None,
+) -> None:
+    """Upsert collector health after a run.
 
-    if existing is None:
+    Does NOT commit — caller is responsible for committing the session.
+    """
+    now = datetime.datetime.now(datetime.timezone.utc)
+    row = session.get(CollectorHealthRow, name)
+
+    if row is None:
         row = CollectorHealthRow(
-            collector_name=health.collector_name,
-            last_run=health.last_run,
-            last_success=health.last_success,
-            records_collected=health.records_collected,
-            error_message=health.error_message,
+            collector_name=name,
+            last_run=now,
+            last_success=now if success else None,
+            records_collected=records if success else 0,
+            error_message=None if success else error,
         )
         session.add(row)
     else:
-        existing.last_run = health.last_run
-        existing.last_success = health.last_success
-        existing.records_collected = health.records_collected
-        existing.error_message = health.error_message
-        row = existing
+        row.last_run = now
+        if success:
+            row.last_success = now
+            row.records_collected = records
+            row.error_message = None
+        else:
+            row.error_message = error
 
     session.flush()
-    return row
 
 
-def get_collector_health(
-    session: Session, collector_name: str
-) -> CollectorHealthRow | None:
-    """Retrieve health record for a collector."""
-    return (
-        session.query(CollectorHealthRow)
-        .filter_by(collector_name=collector_name)
-        .first()
-    )
+def get_collector_health(session: Session) -> list[CollectorHealth]:
+    """Return all collector health records as Pydantic models."""
+    rows = session.query(CollectorHealthRow).all()
+    return [
+        CollectorHealth(
+            collector_name=row.collector_name,
+            last_run=row.last_run,
+            last_success=row.last_success,
+            records_collected=row.records_collected,
+            error_message=row.error_message,
+        )
+        for row in rows
+    ]
