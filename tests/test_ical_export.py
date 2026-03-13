@@ -77,3 +77,50 @@ class TestAuctionsToIcalBasic:
         cal = Calendar.from_ical(auctions_to_ical([auction]))
         event = [c for c in cal.walk() if c.name == "VEVENT"][0]
         assert str(event["UID"]) == "FL-Miami-Dade-2027-04-15-deed@tdc-auction-calendar"
+
+
+class TestDescriptionAndUrl:
+    def test_description_with_all_fields(self):
+        auction = _make_auction(
+            registration_deadline=datetime.date(2027, 4, 1),
+            deposit_amount=Decimal("5000.00"),
+            deposit_deadline=datetime.date(2027, 4, 10),
+            property_count=150,
+            source_url="https://example.com/auction",
+        )
+        cal = Calendar.from_ical(auctions_to_ical([auction]))
+        event = [c for c in cal.walk() if c.name == "VEVENT"][0]
+        desc = str(event["DESCRIPTION"])
+        assert "Registration deadline: 2027-04-01" in desc
+        assert "Deposit amount: $5,000.00" in desc
+        assert "Deposit deadline: 2027-04-10" in desc
+        assert "Properties: 150" in desc
+        assert "Source: https://example.com/auction" in desc
+
+    def test_description_omits_null_fields(self):
+        auction = _make_auction(
+            registration_deadline=None,
+            deposit_amount=None,
+            deposit_deadline=None,
+            property_count=None,
+            source_url=None,
+        )
+        cal = Calendar.from_ical(auctions_to_ical([auction]))
+        event = [c for c in cal.walk() if c.name == "VEVENT"][0]
+        desc = str(event.get("DESCRIPTION", ""))
+        assert "Registration" not in desc
+        assert "Deposit" not in desc
+        assert "Properties" not in desc
+        assert "Source" not in desc
+
+    def test_url_present_when_source_url_set(self):
+        auction = _make_auction(source_url="https://example.com/auction")
+        cal = Calendar.from_ical(auctions_to_ical([auction]))
+        event = [c for c in cal.walk() if c.name == "VEVENT"][0]
+        assert str(event["URL"]) == "https://example.com/auction"
+
+    def test_url_absent_when_source_url_null(self):
+        auction = _make_auction(source_url=None)
+        cal = Calendar.from_ical(auctions_to_ical([auction]))
+        event = [c for c in cal.walk() if c.name == "VEVENT"][0]
+        assert "URL" not in event
