@@ -61,9 +61,20 @@ class CloudflareFetcher:
         return body
 
     async def fetch(
-        self, url: str, *, render_js: bool = True, json_options: dict | None = None
+        self,
+        url: str,
+        *,
+        render_js: bool = True,
+        json_options: dict | None = None,
+        js_code: str | None = None,
+        wait_for: str | None = None,
     ) -> FetchResult:
         """Submit a crawl job and poll until complete."""
+        if js_code is not None or wait_for is not None:
+            raise RuntimeError(
+                f"Cloudflare fetcher does not support js_code/wait_for for {url}; "
+                "requires Crawl4AI fallback"
+            )
         logger.info("cloudflare_fetch_start", url=url, render_js=render_js)
 
         # POST to create job

@@ -1,0 +1,15 @@
+[
+  {"county": "Alachua", "sale_date": "2026-06-01", "sale_type": "lien"},
+  {"county": "Bay", "sale_date": "2026-06-01", "sale_type": "lien"},
+  {"county": "Brevard", "sale_date": "2026-06-01", "sale_type": "lien"},
+  {"county": "Broward", "sale_date": "2026-06-01", "sale_type": "lien"},
+  {"county": "Duval", "sale_date": "2026-06-01", "sale_type": "lien"},
+  {"county": "Hillsborough", "sale_date": "2026-06-01", "sale_type": "lien"},
+  {"county": "Lee", "sale_date": "2026-06-15", "sale_type": "lien"},
+  {"county": "Miami-Dade", "sale_date": "2026-06-01", "sale_type": "lien"},
+  {"county": "Orange", "sale_date": "2026-06-01", "sale_type": "lien"},
+  {"county": "Palm Beach", "sale_date": "2026-06-15", "sale_type": "lien"},
+  {"county": "Pinellas", "sale_date": "2026-06-01", "sale_type": "lien"},
+  {"county": "Polk", "sale_date": "2026-06-15", "sale_type": "lien"},
+  {"county": "Volusia", "sale_date": "2026-06-01", "sale_type": "lien"}
+]

@@ -1,0 +1,7 @@
+[
+  {"county": "Davis", "sale_date": "2026-05-20", "sale_type": "deed"},
+  {"county": "Salt Lake", "sale_date": "2026-05-22", "sale_type": "deed"},
+  {"county": "Utah", "sale_date": "2026-05-20", "sale_type": "deed"},
+  {"county": "Washington", "sale_date": "2026-05-22", "sale_type": "deed"},
+  {"county": "Weber", "sale_date": "2026-05-20", "sale_type": "deed"}
+]

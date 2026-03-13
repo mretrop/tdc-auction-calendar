@@ -1,0 +1,9 @@
+[
+  {"county": "Charleston", "sale_date": "2026-10-05", "sale_type": "deed"},
+  {"county": "Greenville", "sale_date": "2026-10-12", "sale_type": "deed"},
+  {"county": "Horry", "sale_date": "2026-10-05", "sale_type": "deed"},
+  {"county": "Lexington", "sale_date": "2026-10-12", "sale_type": "deed"},
+  {"county": "Richland", "sale_date": "2026-10-05", "sale_type": "deed"},
+  {"county": "Spartanburg", "sale_date": "2026-10-12", "sale_type": "deed"},
+  {"county": "York", "sale_date": "2026-10-05", "sale_type": "deed"}
+]

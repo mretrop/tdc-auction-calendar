@@ -128,6 +128,7 @@ async def test_scrape_threads_json_options_to_fetcher():
 
     fetcher.fetch.assert_called_once_with(
         "https://example.com", render_js=True, json_options=json_opts,
+        js_code=None, wait_for=None,
     )
     assert scrape_result.data == [{"county": "Adams"}]
 

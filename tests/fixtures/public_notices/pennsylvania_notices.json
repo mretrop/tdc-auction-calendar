@@ -1,0 +1,12 @@
+[
+  {"county": "Allegheny", "sale_date": "2026-09-15", "sale_type": "deed"},
+  {"county": "Berks", "sale_date": "2026-09-22", "sale_type": "deed"},
+  {"county": "Bucks", "sale_date": "2026-09-18", "sale_type": "deed"},
+  {"county": "Chester", "sale_date": "2026-09-20", "sale_type": "deed"},
+  {"county": "Dauphin", "sale_date": "2026-09-15", "sale_type": "deed"},
+  {"county": "Delaware", "sale_date": "2026-09-22", "sale_type": "deed"},
+  {"county": "Lancaster", "sale_date": "2026-09-18", "sale_type": "deed"},
+  {"county": "Lehigh", "sale_date": "2026-09-20", "sale_type": "deed"},
+  {"county": "Montgomery", "sale_date": "2026-09-15", "sale_type": "deed"},
+  {"county": "Philadelphia", "sale_date": "2026-09-22", "sale_type": "deed"}
+]

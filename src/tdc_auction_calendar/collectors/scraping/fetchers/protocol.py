@@ -24,7 +24,13 @@ class PageFetcher(Protocol):
     """Protocol for page-fetching backends."""
 
     async def fetch(
-        self, url: str, *, render_js: bool = True, json_options: dict | None = None
+        self,
+        url: str,
+        *,
+        render_js: bool = True,
+        json_options: dict | None = None,
+        js_code: str | None = None,
+        wait_for: str | None = None,
     ) -> FetchResult: ...
 
     async def close(self) -> None: ...

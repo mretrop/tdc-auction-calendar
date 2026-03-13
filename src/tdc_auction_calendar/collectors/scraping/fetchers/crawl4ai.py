@@ -40,14 +40,25 @@ class Crawl4AiFetcher:
         return self._crawler
 
     async def fetch(
-        self, url: str, *, render_js: bool = True, json_options: dict | None = None
+        self,
+        url: str,
+        *,
+        render_js: bool = True,
+        json_options: dict | None = None,
+        js_code: str | None = None,
+        wait_for: str | None = None,
     ) -> FetchResult:
         """Fetch a page using the local headless browser."""
         logger.info("crawl4ai_fetch_start", url=url, render_js=render_js)
 
         crawler = await self._get_crawler()
         try:
-            result = await crawler.arun(url)
+            kwargs: dict = {}
+            if js_code is not None:
+                kwargs["js_code"] = js_code
+            if wait_for is not None:
+                kwargs["wait_for"] = wait_for
+            result = await crawler.arun(url, **kwargs)
         except (OSError, RuntimeError):
             raise
         except Exception as exc:

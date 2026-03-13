@@ -1,0 +1,9 @@
+[
+  {"county": "Buncombe", "sale_date": "2026-07-10", "sale_type": "deed"},
+  {"county": "Cumberland", "sale_date": "2026-07-15", "sale_type": "deed"},
+  {"county": "Durham", "sale_date": "2026-07-10", "sale_type": "deed"},
+  {"county": "Forsyth", "sale_date": "2026-07-15", "sale_type": "deed"},
+  {"county": "Guilford", "sale_date": "2026-07-10", "sale_type": "deed"},
+  {"county": "Mecklenburg", "sale_date": "2026-07-15", "sale_type": "deed"},
+  {"county": "Wake", "sale_date": "2026-07-10", "sale_type": "deed"}
+]
