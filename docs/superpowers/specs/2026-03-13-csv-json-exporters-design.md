@@ -41,6 +41,8 @@ Returns a CSV string with header row.
 
 state, county, sale_type, start_date, end_date, registration_deadline, deposit_amount, interest_rate, property_count, vendor, confidence_score, source_url
 
+Curated subset for spreadsheet use. Intentionally excludes: status (filterable via `--upcoming-only`), source_type, deposit_deadline, min_bid, notes. These are available in the JSON export which includes all fields.
+
 ### Format Details
 
 - ISO 8601 dates (YYYY-MM-DD)
@@ -96,7 +98,7 @@ Both commands follow the same workflow as `export ical`:
 2. Parse date options
 3. Query auctions via shared `query_auctions()`
 4. Convert to format
-5. Write to file or stdout
+5. Write to file (`"w"` text mode, not `"wb"`) or stdout
 6. Echo summary to stderr
 
 ## Acceptance Criteria
@@ -106,3 +108,8 @@ Both commands follow the same workflow as `export ical`:
 - Both exporters share `query_auctions()` from `filters.py`
 - Existing iCal exporter updated to use shared `query_auctions()`
 - iCal export behavior unchanged after refactor
+
+## Notes
+
+- Tests for these exporters are tracked separately in issue #21
+- `exporters/__init__.py` is currently empty; no changes needed (modules imported directly in CLI)
