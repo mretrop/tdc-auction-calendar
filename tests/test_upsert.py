@@ -143,6 +143,27 @@ class TestUpsertAuctions:
         result = upsert_auctions(db_session, [])
         assert result == UpsertResult(new=0, updated=0, skipped=0)
 
+    def test_integrity_error_preserves_prior_inserts(self, db_session):
+        """IntegrityError mid-batch does not roll back prior inserts."""
+        # Insert first auction directly to create a conflict target
+        first = _make_auction(county="Miami-Dade")
+        upsert_auctions(db_session, [first])
+        db_session.flush()
+
+        # Batch: new record, then duplicate (same dedup key, same confidence → skip),
+        # then another new record
+        batch = [
+            _make_auction(county="Broward"),
+            _make_auction(county="Miami-Dade"),  # same key, same confidence → skipped
+            _make_auction(county="Palm Beach"),
+        ]
+        result = upsert_auctions(db_session, batch)
+
+        assert result.new == 2
+        assert result.skipped == 1
+        # All 3 records (original + 2 new) must exist
+        assert db_session.query(AuctionRow).count() == 3
+
 
 class TestSaveCollectorHealth:
     def test_save_success(self, db_session):

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import time
+
 import structlog
+from sqlalchemy.orm import Session
 
 from tdc_auction_calendar.collectors.base import BaseCollector
 from tdc_auction_calendar.collectors.county_websites import CountyWebsiteCollector
@@ -23,12 +25,9 @@ from tdc_auction_calendar.collectors.state_agencies import (
     IowaCollector,
 )
 from tdc_auction_calendar.collectors.statutory import StatutoryCollector
+from tdc_auction_calendar.db.upsert import save_collector_health, upsert_auctions
 from tdc_auction_calendar.models.auction import Auction, DeduplicationKey
 from tdc_auction_calendar.models.health import CollectorError, RunReport
-
-from sqlalchemy.orm import Session
-
-from tdc_auction_calendar.db.upsert import save_collector_health, upsert_auctions
 
 logger = structlog.get_logger()
 
@@ -97,12 +96,18 @@ async def run_all(
         except Exception as exc:
             failed.append(
                 CollectorError(
-                    name=name,
-                    error=str(exc),
+                    collector_name=name,
+                    error=repr(exc),
                     error_type=type(exc).__name__,
                 )
             )
-            logger.warning("collector_failed", collector=name, error=str(exc))
+            logger.error(
+                "collector_failed",
+                collector=name,
+                error=repr(exc),
+                error_type=type(exc).__name__,
+                exc_info=True,
+            )
 
     # 3. Cross-collector dedup
     deduped = cross_dedup(all_auctions)
@@ -127,27 +132,41 @@ async def run_and_persist(
     """Run all collectors and persist results to the database."""
     auctions, report = await run_all(collectors)
 
-    # Upsert auctions
-    upsert_result = upsert_auctions(session, auctions)
-    report.new_records = upsert_result.new
-    report.updated_records = upsert_result.updated
-    report.skipped_records = upsert_result.skipped
+    try:
+        # Upsert auctions
+        upsert_result = upsert_auctions(session, auctions)
+        report.new_records = upsert_result.new
+        report.updated_records = upsert_result.updated
+        report.skipped_records = upsert_result.skipped
 
-    # Save health for each collector (using per-collector counts)
-    for name in report.collectors_succeeded:
-        save_collector_health(
-            session,
-            name=name,
-            success=True,
-            records=report.per_collector_counts.get(name, 0),
-            error=None,
-        )
-    for err in report.collectors_failed:
-        save_collector_health(
-            session, name=err.name, success=False, records=0, error=err.error
-        )
+        # Save health for each collector (using per-collector counts)
+        for name in report.collectors_succeeded:
+            save_collector_health(
+                session,
+                name=name,
+                success=True,
+                records=report.per_collector_counts.get(name, 0),
+                error=None,
+            )
+        for err in report.collectors_failed:
+            save_collector_health(
+                session,
+                name=err.collector_name,
+                success=False,
+                records=0,
+                error=err.error,
+            )
 
-    # Single commit for all DB writes
-    session.commit()
+        # Single commit for all DB writes
+        session.commit()
+    except Exception:
+        session.rollback()
+        logger.error(
+            "run_and_persist_failed",
+            collectors_run=len(report.collectors_succeeded) + len(report.collectors_failed),
+            auctions_collected=report.total_records,
+            exc_info=True,
+        )
+        raise
 
     return report

@@ -150,7 +150,7 @@ class TestRunAll:
         assert len(auctions) == 1
         assert "success" in report.collectors_succeeded
         assert len(report.collectors_failed) == 1
-        assert report.collectors_failed[0].name == "fail"
+        assert report.collectors_failed[0].collector_name == "fail"
         assert report.collectors_failed[0].error_type == "ConnectionError"
 
     async def test_cross_dedup_applied(self):

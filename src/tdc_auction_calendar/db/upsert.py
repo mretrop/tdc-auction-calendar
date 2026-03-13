@@ -76,27 +76,42 @@ def upsert_auctions(session: Session, auctions: list[Auction]) -> UpsertResult:
             row = AuctionRow(
                 **{field: _field_value(auction, field) for field in _UPSERT_FIELDS}
             )
-            session.add(row)
             try:
-                session.flush()
-            except IntegrityError:
-                session.rollback()
+                with session.begin_nested():
+                    session.add(row)
+                    session.flush()
+            except IntegrityError as exc:
                 skipped += 1
                 logger.warning(
-                    "upsert_integrity_error",
+                    "upsert_insert_integrity_error",
                     state=auction.state,
                     county=auction.county,
+                    start_date=str(auction.start_date),
+                    sale_type=auction.sale_type.value,
+                    error=str(exc.orig),
                 )
                 continue
             new += 1
         elif auction.confidence_score > existing.confidence_score:
-            for field in _UPSERT_FIELDS:
-                setattr(existing, field, _field_value(auction, field))
+            try:
+                with session.begin_nested():
+                    for field in _UPSERT_FIELDS:
+                        setattr(existing, field, _field_value(auction, field))
+                    session.flush()
+            except IntegrityError as exc:
+                skipped += 1
+                logger.warning(
+                    "upsert_update_integrity_error",
+                    state=auction.state,
+                    county=auction.county,
+                    start_date=str(auction.start_date),
+                    sale_type=auction.sale_type.value,
+                    error=str(exc.orig),
+                )
+                continue
             updated += 1
         else:
             skipped += 1
-
-    session.flush()
     logger.info("upsert_complete", new=new, updated=updated, skipped=skipped)
     return UpsertResult(new=new, updated=updated, skipped=skipped)
 
@@ -139,13 +154,4 @@ def save_collector_health(
 def get_collector_health(session: Session) -> list[CollectorHealth]:
     """Return all collector health records as Pydantic models."""
     rows = session.query(CollectorHealthRow).all()
-    return [
-        CollectorHealth(
-            collector_name=row.collector_name,
-            last_run=row.last_run,
-            last_success=row.last_success,
-            records_collected=row.records_collected,
-            error_message=row.error_message,
-        )
-        for row in rows
-    ]
+    return [CollectorHealth.model_validate(row) for row in rows]

@@ -70,7 +70,7 @@ class TestRunReport:
     def test_run_report_with_failures(self):
         """RunReport holds CollectorError list."""
         err = CollectorError(
-            name="broken", error="timeout", error_type="TimeoutError"
+            collector_name="broken", error="timeout", error_type="TimeoutError"
         )
         report = RunReport(
             total_records=0,
