@@ -7,8 +7,8 @@ from decimal import Decimal
 
 from icalendar import Calendar
 
-from tdc_auction_calendar.exporters.ical import auctions_to_ical
-from tdc_auction_calendar.models.auction import Auction
+from tdc_auction_calendar.exporters.ical import auctions_to_ical, query_auctions
+from tdc_auction_calendar.models.auction import Auction, AuctionRow
 
 
 def _make_auction(**overrides) -> Auction:
@@ -198,3 +198,86 @@ class TestValarms:
         alarms = [c for c in event.walk() if c.name == "VALARM"]
         for alarm in alarms:
             assert str(alarm["ACTION"]) == "DISPLAY"
+
+
+def _future(days=365):
+    return datetime.date.today() + datetime.timedelta(days=days)
+
+
+def _past(days=30):
+    return datetime.date.today() - datetime.timedelta(days=days)
+
+
+def _insert_auction(session, **overrides):
+    """Insert an AuctionRow with defaults."""
+    defaults = {
+        "state": "FL",
+        "county": "Miami-Dade",
+        "start_date": _future(),
+        "sale_type": "deed",
+        "status": "upcoming",
+        "source_type": "statutory",
+        "confidence_score": 1.0,
+    }
+    defaults.update(overrides)
+    session.add(AuctionRow(**defaults))
+    session.commit()
+
+
+class TestQueryAuctions:
+    def test_returns_future_auctions_by_default(self, db_session):
+        _insert_auction(db_session, start_date=_future())
+        _insert_auction(db_session, county="Broward", start_date=_past())
+        result = query_auctions(db_session)
+        assert len(result) == 1
+        assert result[0].county == "Miami-Dade"
+
+    def test_filter_by_single_state(self, db_session):
+        _insert_auction(db_session, state="FL")
+        _insert_auction(db_session, state="TX", county="Harris")
+        result = query_auctions(db_session, states=["FL"])
+        assert len(result) == 1
+        assert result[0].state == "FL"
+
+    def test_filter_by_multiple_states(self, db_session):
+        _insert_auction(db_session, state="FL")
+        _insert_auction(db_session, state="TX", county="Harris")
+        _insert_auction(db_session, state="GA", county="Fulton", start_date=_future(days=400))
+        result = query_auctions(db_session, states=["FL", "TX"])
+        assert len(result) == 2
+        assert {a.state for a in result} == {"FL", "TX"}
+
+    def test_filter_by_sale_type(self, db_session):
+        _insert_auction(db_session, sale_type="deed")
+        _insert_auction(db_session, county="Broward", sale_type="lien")
+        result = query_auctions(db_session, sale_type="lien")
+        assert len(result) == 1
+        assert result[0].sale_type == "lien"
+
+    def test_filter_by_date_range(self, db_session):
+        near = _future(days=30)
+        far = _future(days=400)
+        _insert_auction(db_session, start_date=near)
+        _insert_auction(db_session, county="Broward", start_date=far)
+        cutoff = near + datetime.timedelta(days=5)
+        result = query_auctions(db_session, from_date=near, to_date=cutoff)
+        assert len(result) == 1
+        assert result[0].county == "Miami-Dade"
+
+    def test_to_date_none_means_no_upper_bound(self, db_session):
+        _insert_auction(db_session, start_date=_future(days=1000))
+        result = query_auctions(db_session, from_date=datetime.date.today())
+        assert len(result) == 1
+
+    def test_returns_pydantic_models(self, db_session):
+        _insert_auction(db_session)
+        result = query_auctions(db_session)
+        assert len(result) == 1
+        assert isinstance(result[0], Auction)
+
+    def test_ordered_by_start_date(self, db_session):
+        _insert_auction(db_session, county="Later", start_date=_future(days=400))
+        _insert_auction(db_session, county="Sooner", start_date=_future(days=30))
+        result = query_auctions(db_session)
+        assert result[0].county == "Sooner"
+        assert result[1].county == "Later"

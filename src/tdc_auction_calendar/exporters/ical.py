@@ -5,8 +5,10 @@ from __future__ import annotations
 import datetime
 
 from icalendar import Alarm, Calendar, Event
+from sqlalchemy.orm import Session
 
-from tdc_auction_calendar.models.auction import Auction
+from tdc_auction_calendar.models.auction import Auction, AuctionRow
+from tdc_auction_calendar.models.enums import SaleType
 
 
 def _build_description(auction: Auction) -> str:
@@ -82,3 +84,28 @@ def auctions_to_ical(auctions: list[Auction]) -> bytes:
     for auction in auctions:
         cal.add_component(_build_event(auction))
     return cal.to_ical()
+
+
+def query_auctions(
+    session: Session,
+    states: list[str] | None = None,
+    sale_type: SaleType | None = None,
+    from_date: datetime.date | None = None,
+    to_date: datetime.date | None = None,
+) -> list[Auction]:
+    """Query auctions from the DB with optional filters, return Pydantic models."""
+    query = session.query(AuctionRow)
+
+    if states:
+        query = query.filter(AuctionRow.state.in_([s.upper() for s in states]))
+    if sale_type:
+        query = query.filter(AuctionRow.sale_type == str(sale_type))
+    if from_date:
+        query = query.filter(AuctionRow.start_date >= from_date)
+    else:
+        query = query.filter(AuctionRow.start_date >= datetime.date.today())
+    if to_date:
+        query = query.filter(AuctionRow.start_date <= to_date)
+
+    rows = query.order_by(AuctionRow.start_date).all()
+    return [Auction.model_validate(r, from_attributes=True) for r in rows]
