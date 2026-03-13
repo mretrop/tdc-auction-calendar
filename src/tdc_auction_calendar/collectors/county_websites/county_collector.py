@@ -95,6 +95,7 @@ class CountyWebsiteCollector(BaseCollector):
         client = create_scrape_client()
         try:
             all_auctions: list[Auction] = []
+            today = date.today()
             for target in self._county_targets:
                 url = target["tax_sale_page_url"]
                 try:
@@ -136,7 +137,6 @@ class CountyWebsiteCollector(BaseCollector):
                     )
                     continue
 
-                today = date.today()
                 for raw in raw_records:
                     try:
                         auction = self._normalize_record(raw, target)

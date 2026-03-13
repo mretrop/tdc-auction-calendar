@@ -43,6 +43,12 @@ def test_source_type(collector):
     assert collector.source_type == SourceType.COUNTY_WEBSITE
 
 
+def test_normalize_raises_not_implemented(collector):
+    """normalize() requires county context; callers must use _normalize_record()."""
+    with pytest.raises(NotImplementedError):
+        collector.normalize({"sale_date": "2026-06-15"})
+
+
 def test_loads_counties_with_urls(collector):
     """Only counties with tax_sale_page_url should be loaded."""
     assert len(collector._county_targets) >= 50
