@@ -101,3 +101,144 @@ def test_normalize_optional_fields_absent(collector):
     assert auction.end_date is None
     assert auction.deposit_amount is None
     assert auction.registration_deadline is None
+
+
+# --- Fetch behavior tests ---
+
+def _make_collector_with_targets(targets):
+    """Create a collector with specific county targets (bypasses seed loading)."""
+    collector = CountyWebsiteCollector.__new__(CountyWebsiteCollector)
+    collector._county_targets = targets
+    return collector
+
+
+_TEST_TARGETS = [
+    {
+        "state_code": "FL",
+        "county_name": "Duval",
+        "tax_sale_page_url": "https://duval.example.com/taxsale",
+        "default_sale_type": "lien",
+    },
+    {
+        "state_code": "CO",
+        "county_name": "Denver",
+        "tax_sale_page_url": "https://denver.example.com/taxlien",
+        "default_sale_type": "lien",
+    },
+]
+
+
+async def test_fetch_returns_auctions():
+    collector = _make_collector_with_targets(_TEST_TARGETS)
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(
+        [{"sale_date": "2026-06-15", "sale_type": "lien"}]
+    )
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.county_websites.county_collector.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) == 2
+    states = {a.state for a in auctions}
+    assert states == {"FL", "CO"}
+
+
+async def test_fetch_skips_failed_counties():
+    collector = _make_collector_with_targets(_TEST_TARGETS)
+    mock_client = AsyncMock()
+    mock_client.scrape.side_effect = [
+        RuntimeError("network error"),
+        _mock_scrape_result(
+            [{"sale_date": "2026-06-15", "sale_type": "lien"}]
+        ),
+    ]
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.county_websites.county_collector.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) == 1
+    assert auctions[0].state == "CO"
+
+
+async def test_fetch_skips_invalid_records():
+    collector = _make_collector_with_targets(_TEST_TARGETS[:1])
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result([
+        {"sale_date": "2026-06-15", "sale_type": "lien"},
+        {"sale_date": "bad-date"},
+    ])
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.county_websites.county_collector.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) == 1
+
+
+async def test_fetch_filters_past_dates():
+    collector = _make_collector_with_targets(_TEST_TARGETS[:1])
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result([
+        {"sale_date": "2026-06-15", "sale_type": "lien"},
+        {"sale_date": "2020-01-01", "sale_type": "lien"},
+    ])
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.county_websites.county_collector.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) == 1
+    assert auctions[0].start_date == date(2026, 6, 15)
+
+
+async def test_fetch_empty_urls_returns_empty():
+    collector = _make_collector_with_targets([])
+    auctions = await collector.collect()
+    assert auctions == []
+
+
+async def test_fetch_single_dict_result():
+    collector = _make_collector_with_targets(_TEST_TARGETS[:1])
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(
+        {"sale_date": "2026-06-15", "sale_type": "lien"}
+    )
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.county_websites.county_collector.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) == 1
+
+
+async def test_closes_client_on_failure():
+    collector = _make_collector_with_targets(_TEST_TARGETS[:1])
+    mock_client = AsyncMock()
+    mock_client.scrape.side_effect = RuntimeError("network error")
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.county_websites.county_collector.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert auctions == []
+    mock_client.close.assert_called_once()

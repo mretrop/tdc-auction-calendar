@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 import structlog
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from tdc_auction_calendar.collectors.base import BaseCollector
+from tdc_auction_calendar.collectors.scraping import create_scrape_client
 from tdc_auction_calendar.db.seed_loader import SEED_DIR
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SaleType, SourceType
@@ -88,4 +89,71 @@ class CountyWebsiteCollector(BaseCollector):
         )
 
     async def _fetch(self) -> list[Auction]:
-        raise NotImplementedError("Implement after fetch tests")
+        if not self._county_targets:
+            return []
+
+        client = create_scrape_client()
+        try:
+            all_auctions: list[Auction] = []
+            for target in self._county_targets:
+                url = target["tax_sale_page_url"]
+                try:
+                    result = await client.scrape(
+                        url, schema=CountyAuctionRecord,
+                    )
+                except Exception:
+                    logger.warning(
+                        "county_scrape_failed",
+                        collector=self.name,
+                        state=target["state_code"],
+                        county=target["county_name"],
+                        url=url,
+                    )
+                    continue
+
+                if isinstance(result.data, list):
+                    raw_records = result.data
+                elif result.data is None:
+                    raw_records = []
+                elif isinstance(result.data, dict):
+                    raw_records = [result.data]
+                else:
+                    logger.warning(
+                        "unexpected_data_type",
+                        collector=self.name,
+                        county=target["county_name"],
+                        data_type=type(result.data).__name__,
+                    )
+                    continue
+
+                if not raw_records:
+                    logger.info(
+                        "county_no_results",
+                        collector=self.name,
+                        state=target["state_code"],
+                        county=target["county_name"],
+                        url=url,
+                    )
+                    continue
+
+                today = date.today()
+                for raw in raw_records:
+                    try:
+                        auction = self._normalize_record(raw, target)
+                        if auction.start_date < today:
+                            continue
+                        all_auctions.append(auction)
+                    except (KeyError, ValueError, ValidationError, InvalidOperation) as exc:
+                        logger.error(
+                            "normalize_failed",
+                            collector=self.name,
+                            state=target["state_code"],
+                            county=target["county_name"],
+                            raw=raw,
+                            error=str(exc),
+                            error_type=type(exc).__name__,
+                        )
+
+            return all_auctions
+        finally:
+            await client.close()
