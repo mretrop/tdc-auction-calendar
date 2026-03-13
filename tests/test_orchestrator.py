@@ -270,3 +270,15 @@ class TestRunAndPersist:
 
         assert report.new_records == 2
         assert report.total_records == 2
+
+
+class TestRegistry:
+    def test_registry_has_13_collectors(self):
+        """Registry contains all 13 collectors."""
+        assert len(COLLECTORS) == 13
+
+    def test_registry_keys_match_collector_names(self):
+        """Registry keys match each collector's .name property."""
+        for key, cls in COLLECTORS.items():
+            instance = cls()
+            assert key == instance.name, f"Registry key {key!r} != {cls.__name__}.name {instance.name!r}"
