@@ -125,3 +125,133 @@ async def test_css_extraction_ignores_schema():
     )
     result = await extractor.extract(SAMPLE_HTML, schema=AuctionInfo)
     assert isinstance(result, list)
+
+
+# --- LLMExtraction enhancement tests (issue #14) ---
+
+
+async def test_llm_extraction_default_model():
+    """Default model is claude-haiku-4-5-20251001."""
+    extractor = LLMExtraction(client=AsyncMock())
+    assert extractor._model == "claude-haiku-4-5-20251001"
+
+
+async def test_llm_extraction_on_usage_callback():
+    """on_usage callback receives model, schema name, and usage."""
+    usage_calls = []
+
+    def on_usage(model, schema_name, usage):
+        usage_calls.append((model, schema_name, usage))
+
+    mock_usage = MagicMock()
+    mock_usage.input_tokens = 500
+    mock_usage.output_tokens = 100
+
+    mock_client = AsyncMock()
+    mock_client.messages.create.return_value = MagicMock(
+        content=[
+            MagicMock(
+                type="tool_use",
+                input={"county": "Test", "date": "2026-01-01", "sale_type": "deed"},
+            )
+        ],
+        usage=mock_usage,
+    )
+
+    extractor = LLMExtraction(client=mock_client, on_usage=on_usage)
+    await extractor.extract("content", schema=AuctionInfo)
+
+    assert len(usage_calls) == 1
+    assert usage_calls[0][0] == "claude-haiku-4-5-20251001"
+    assert usage_calls[0][1] == "AuctionInfo"
+    assert usage_calls[0][2].input_tokens == 500
+
+
+async def test_llm_extraction_on_usage_fires_before_validation():
+    """on_usage fires even if Pydantic validation fails."""
+    usage_calls = []
+
+    mock_client = AsyncMock()
+    mock_client.messages.create.return_value = MagicMock(
+        content=[
+            MagicMock(
+                type="tool_use",
+                input={"bad_field": "value"},  # Will fail AuctionInfo validation
+            )
+        ],
+        usage=MagicMock(input_tokens=100, output_tokens=50),
+    )
+
+    extractor = LLMExtraction(
+        client=mock_client,
+        on_usage=lambda m, s, u: usage_calls.append((m, s, u)),
+    )
+
+    with pytest.raises(Exception):  # Pydantic ValidationError
+        await extractor.extract("content", schema=AuctionInfo)
+
+    assert len(usage_calls) == 1
+
+
+async def test_llm_extraction_api_error():
+    """anthropic.APIError is caught and raised as RuntimeError."""
+    import anthropic
+
+    mock_client = AsyncMock()
+    mock_client.messages.create.side_effect = anthropic.APIError(
+        message="rate limited",
+        request=MagicMock(),
+        body=None,
+    )
+
+    extractor = LLMExtraction(client=mock_client)
+
+    with pytest.raises(RuntimeError, match="Claude API error"):
+        await extractor.extract("content", schema=AuctionInfo)
+
+
+async def test_llm_extraction_api_error_does_not_fire_on_usage():
+    """on_usage is NOT called when APIError occurs (no usage data available)."""
+    import anthropic
+
+    usage_calls = []
+
+    mock_client = AsyncMock()
+    mock_client.messages.create.side_effect = anthropic.APIError(
+        message="rate limited",
+        request=MagicMock(),
+        body=None,
+    )
+
+    extractor = LLMExtraction(
+        client=mock_client,
+        on_usage=lambda m, s, u: usage_calls.append((m, s, u)),
+    )
+
+    with pytest.raises(RuntimeError):
+        await extractor.extract("content", schema=AuctionInfo)
+
+    assert len(usage_calls) == 0
+
+
+async def test_llm_extraction_on_usage_failure_does_not_break_extraction():
+    """A failing on_usage callback does not prevent extraction from returning data."""
+    def bad_callback(model, schema_name, usage):
+        raise RuntimeError("logging crashed")
+
+    mock_client = AsyncMock()
+    mock_client.messages.create.return_value = MagicMock(
+        content=[
+            MagicMock(
+                type="tool_use",
+                input={"county": "Test", "date": "2026-01-01", "sale_type": "deed"},
+            )
+        ],
+        usage=MagicMock(input_tokens=100, output_tokens=50),
+    )
+
+    extractor = LLMExtraction(client=mock_client, on_usage=bad_callback)
+    result = await extractor.extract("content", schema=AuctionInfo)
+
+    assert isinstance(result, AuctionInfo)
+    assert result.county == "Test"

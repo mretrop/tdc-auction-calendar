@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from html.parser import HTMLParser
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 import structlog
 from pydantic import BaseModel
@@ -25,10 +25,12 @@ class LLMExtraction:
     def __init__(
         self,
         client: Any = None,
-        model: str = "claude-sonnet-4-20250514",
+        model: str = "claude-haiku-4-5-20251001",
+        on_usage: Callable[[str, str, Any], None] | None = None,
     ) -> None:
         self._client = client
         self._model = model
+        self._on_usage = on_usage
 
     def _get_client(self) -> Any:
         if self._client is None:
@@ -44,6 +46,8 @@ class LLMExtraction:
         if schema is None:
             raise ValueError("LLMExtraction requires a schema parameter")
 
+        import anthropic
+
         client = self._get_client()
         json_schema = schema.model_json_schema()
         json_schema.pop("title", None)
@@ -56,18 +60,41 @@ class LLMExtraction:
 
         logger.info("llm_extraction_start", schema=schema.__name__, model=self._model)
 
-        response = await client.messages.create(
-            model=self._model,
-            max_tokens=1024,
-            tools=[tool],
-            tool_choice={"type": "tool", "name": schema.__name__},
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Extract structured data from this page content:\n\n{content}",
-                }
-            ],
-        )
+        try:
+            response = await client.messages.create(
+                model=self._model,
+                max_tokens=1024,
+                tools=[tool],
+                tool_choice={"type": "tool", "name": schema.__name__},
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Extract structured data from this page content:\n\n{content}",
+                    }
+                ],
+            )
+        except anthropic.APIError as exc:
+            logger.error(
+                "llm_extraction_api_error",
+                schema=schema.__name__,
+                error_type=type(exc).__name__,
+                status_code=getattr(exc, "status_code", None),
+                error=str(exc),
+            )
+            raise RuntimeError(
+                f"Claude API error ({type(exc).__name__}) during "
+                f"{schema.__name__} extraction: {exc}"
+            ) from exc
+
+        if self._on_usage is not None:
+            try:
+                self._on_usage(self._model, schema.__name__, response.usage)
+            except Exception as exc:
+                logger.warning(
+                    "on_usage_callback_failed",
+                    schema=schema.__name__,
+                    error=str(exc),
+                )
 
         for block in response.content:
             if block.type == "tool_use":

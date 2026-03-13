@@ -173,8 +173,9 @@ async def test_scrape_with_extraction(ok_fetcher, rate_limiter, cache):
     assert result.data == {"county": "Miami-Dade"}
 
 
-async def test_scrape_schema_without_extraction_defaults_to_llm(ok_fetcher, rate_limiter, cache):
+async def test_scrape_schema_without_extraction_defaults_to_llm(ok_fetcher, rate_limiter, cache, monkeypatch):
     """Passing schema without extraction creates a default LLMExtraction."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
 
     class MySchema(BaseModel):
         county: str
@@ -183,7 +184,9 @@ async def test_scrape_schema_without_extraction_defaults_to_llm(ok_fetcher, rate
 
     with patch(
         "tdc_auction_calendar.collectors.scraping.client.LLMExtraction"
-    ) as MockLLM:
+    ) as MockLLM, patch(
+        "tdc_auction_calendar.collectors.scraping.client.BudgetLogger"
+    ):
         mock_instance = AsyncMock()
         mock_instance.extract.return_value = MySchema(county="Test")
         MockLLM.return_value = mock_instance
@@ -313,3 +316,60 @@ def test_create_scrape_client_invalid_env_var(tmp_path, monkeypatch):
 
     with pytest.raises(ValueError, match="SCRAPE_CACHE_TTL"):
         create_scrape_client(cache_dir=str(tmp_path))
+
+
+# --- API key gating and BudgetLogger wiring tests (issue #14) ---
+
+
+async def test_client_raises_without_api_key(ok_fetcher, rate_limiter, cache, monkeypatch):
+    """Without ANTHROPIC_API_KEY, schema-based extraction raises ExtractionError."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    class MySchema(BaseModel):
+        county: str
+
+    client = _make_client(ok_fetcher, rate_limiter=rate_limiter, cache=cache)
+
+    with pytest.raises(ExtractionError, match="ANTHROPIC_API_KEY not set"):
+        await client.scrape("https://example.com", schema=MySchema)
+
+
+async def test_client_llm_extraction_with_api_key(ok_fetcher, rate_limiter, cache, monkeypatch):
+    """With ANTHROPIC_API_KEY, schema-based extraction creates LLMExtraction with BudgetLogger."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+
+    class MySchema(BaseModel):
+        county: str
+
+    client = _make_client(ok_fetcher, rate_limiter=rate_limiter, cache=cache)
+
+    with patch(
+        "tdc_auction_calendar.collectors.scraping.client.LLMExtraction"
+    ) as MockLLM, patch(
+        "tdc_auction_calendar.collectors.scraping.client.BudgetLogger"
+    ) as MockBudget:
+        mock_instance = AsyncMock()
+        mock_instance.extract.return_value = MySchema(county="Test")
+        MockLLM.return_value = mock_instance
+        mock_budget_instance = MagicMock()
+        MockBudget.return_value = mock_budget_instance
+
+        result = await client.scrape("https://example.com", schema=MySchema)
+
+    MockBudget.assert_called_once()
+    MockLLM.assert_called_once_with(on_usage=mock_budget_instance.log)
+    assert result.data.county == "Test"
+
+
+async def test_client_explicit_extraction_bypasses_api_key_check(ok_fetcher, rate_limiter, cache, monkeypatch):
+    """Passing an explicit extraction strategy bypasses the API key check."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    extractor = AsyncMock()
+    extractor.extract.return_value = {"county": "Test"}
+
+    client = _make_client(ok_fetcher, rate_limiter=rate_limiter, cache=cache)
+    result = await client.scrape("https://example.com", extraction=extractor)
+
+    extractor.extract.assert_called_once()
+    assert result.data == {"county": "Test"}
