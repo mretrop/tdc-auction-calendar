@@ -281,3 +281,61 @@ class TestQueryAuctions:
         result = query_auctions(db_session)
         assert result[0].county == "Sooner"
         assert result[1].county == "Later"
+
+
+class TestRoundTrip:
+    def test_full_round_trip(self):
+        """Acceptance: output validates via icalendar parse round-trip."""
+        auctions = [
+            _make_auction(
+                state="FL", county="Miami-Dade",
+                start_date=datetime.date(2027, 4, 15),
+                end_date=datetime.date(2027, 4, 17),
+                sale_type="deed",
+                registration_deadline=datetime.date(2027, 4, 1),
+                deposit_deadline=datetime.date(2027, 4, 10),
+                deposit_amount=Decimal("5000.00"),
+                property_count=150,
+                source_url="https://example.com/auction",
+            ),
+            _make_auction(
+                state="TX", county="Harris",
+                start_date=datetime.date(2027, 6, 1),
+                end_date=None,
+                sale_type="lien",
+                registration_deadline=None,
+                deposit_deadline=None,
+                source_url=None,
+            ),
+        ]
+        ical_bytes = auctions_to_ical(auctions)
+
+        # Parse round-trip
+        cal = Calendar.from_ical(ical_bytes)
+        events = [c for c in cal.walk() if c.name == "VEVENT"]
+        assert len(events) == 2
+
+        # First event — full fields
+        fl = next(e for e in events if "Miami-Dade" in str(e["SUMMARY"]))
+        assert str(fl["SUMMARY"]) == "Miami-Dade FL Tax Deed Sale"
+        assert fl["DTSTART"].dt == datetime.date(2027, 4, 15)
+        assert fl["DTEND"].dt == datetime.date(2027, 4, 17)
+        assert "URL" in fl
+        alarms = [c for c in fl.walk() if c.name == "VALARM"]
+        assert len(alarms) == 3  # 2 registration + 1 deposit
+
+        # Second event — minimal fields
+        tx = next(e for e in events if "Harris" in str(e["SUMMARY"]))
+        assert tx["DTEND"].dt == datetime.date(2027, 6, 2)  # start + 1 day
+        assert "URL" not in tx
+        tx_alarms = [c for c in tx.walk() if c.name == "VALARM"]
+        assert len(tx_alarms) == 0
+
+    def test_multiple_auctions_same_fields(self):
+        """Multiple events with unique UIDs."""
+        a1 = _make_auction(state="FL", county="Miami-Dade", start_date=datetime.date(2027, 4, 15))
+        a2 = _make_auction(state="FL", county="Broward", start_date=datetime.date(2027, 5, 1))
+        cal = Calendar.from_ical(auctions_to_ical([a1, a2]))
+        events = [c for c in cal.walk() if c.name == "VEVENT"]
+        uids = [str(e["UID"]) for e in events]
+        assert len(set(uids)) == 2  # unique UIDs
