@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from datetime import date
+from decimal import Decimal
 
 import structlog
 from pydantic import BaseModel
@@ -10,7 +12,7 @@ from pydantic import BaseModel
 from tdc_auction_calendar.collectors.base import BaseCollector
 from tdc_auction_calendar.db.seed_loader import SEED_DIR
 from tdc_auction_calendar.models.auction import Auction
-from tdc_auction_calendar.models.enums import SourceType
+from tdc_auction_calendar.models.enums import SaleType, SourceType
 
 logger = structlog.get_logger()
 
@@ -68,7 +70,22 @@ class CountyWebsiteCollector(BaseCollector):
         raise NotImplementedError("Use _normalize_record() with county_target context")
 
     def _normalize_record(self, raw: dict, county_target: dict) -> Auction:
-        raise NotImplementedError("Implement after normalization tests")
+        """Convert a raw extraction record into a validated Auction."""
+        return Auction(
+            state=county_target["state_code"],
+            county=county_target["county_name"],
+            start_date=date.fromisoformat(raw["sale_date"]),
+            sale_type=SaleType(raw.get("sale_type") or county_target["default_sale_type"]),
+            source_type=SourceType.COUNTY_WEBSITE,
+            source_url=county_target["tax_sale_page_url"],
+            confidence_score=self.confidence_score,
+            end_date=date.fromisoformat(raw["end_date"]) if raw.get("end_date") else None,
+            deposit_amount=Decimal(raw["deposit_amount"]) if raw.get("deposit_amount") else None,
+            registration_deadline=(
+                date.fromisoformat(raw["registration_deadline"])
+                if raw.get("registration_deadline") else None
+            ),
+        )
 
     async def _fetch(self) -> list[Auction]:
         raise NotImplementedError("Implement after fetch tests")
