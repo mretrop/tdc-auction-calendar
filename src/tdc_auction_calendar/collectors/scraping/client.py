@@ -148,7 +148,6 @@ class ScrapeClient:
         elif extraction is not None or schema is not None:
             data = await self._run_extraction(fetch_result, extraction, schema)
 
-        # 8. Return
         return ScrapeResult(fetch=fetch_result, data=data, from_cache=False)
 
     async def _fetch_with_fallback(

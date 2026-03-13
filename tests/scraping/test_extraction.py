@@ -232,3 +232,26 @@ async def test_llm_extraction_api_error_does_not_fire_on_usage():
         await extractor.extract("content", schema=AuctionInfo)
 
     assert len(usage_calls) == 0
+
+
+async def test_llm_extraction_on_usage_failure_does_not_break_extraction():
+    """A failing on_usage callback does not prevent extraction from returning data."""
+    def bad_callback(model, schema_name, usage):
+        raise RuntimeError("logging crashed")
+
+    mock_client = AsyncMock()
+    mock_client.messages.create.return_value = MagicMock(
+        content=[
+            MagicMock(
+                type="tool_use",
+                input={"county": "Test", "date": "2026-01-01", "sale_type": "deed"},
+            )
+        ],
+        usage=MagicMock(input_tokens=100, output_tokens=50),
+    )
+
+    extractor = LLMExtraction(client=mock_client, on_usage=bad_callback)
+    result = await extractor.extract("content", schema=AuctionInfo)
+
+    assert isinstance(result, AuctionInfo)
+    assert result.county == "Test"

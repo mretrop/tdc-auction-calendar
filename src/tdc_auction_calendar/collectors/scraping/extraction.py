@@ -74,17 +74,27 @@ class LLMExtraction:
                 ],
             )
         except anthropic.APIError as exc:
-            logger.warning(
+            logger.error(
                 "llm_extraction_api_error",
                 schema=schema.__name__,
+                error_type=type(exc).__name__,
+                status_code=getattr(exc, "status_code", None),
                 error=str(exc),
             )
             raise RuntimeError(
-                f"Claude API error during {schema.__name__} extraction: {exc}"
+                f"Claude API error ({type(exc).__name__}) during "
+                f"{schema.__name__} extraction: {exc}"
             ) from exc
 
         if self._on_usage is not None:
-            self._on_usage(self._model, schema.__name__, response.usage)
+            try:
+                self._on_usage(self._model, schema.__name__, response.usage)
+            except Exception as exc:
+                logger.warning(
+                    "on_usage_callback_failed",
+                    schema=schema.__name__,
+                    error=str(exc),
+                )
 
         for block in response.content:
             if block.type == "tool_use":

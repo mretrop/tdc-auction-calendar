@@ -43,7 +43,13 @@ class BudgetLogger:
             with self._path.open("a") as f:
                 f.write(json.dumps(record) + "\n")
         except OSError as exc:
-            logger.warning("budget_log_write_failed", error=str(exc))
+            logger.warning(
+                "budget_log_write_failed",
+                model=model,
+                schema=schema_name,
+                path=str(self._path),
+                error=str(exc),
+            )
 
     def _estimate_cost(
         self, model: str, input_tokens: int, output_tokens: int
