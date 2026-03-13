@@ -11,8 +11,11 @@ from tdc_auction_calendar.collectors.orchestrator import (
     COLLECTORS,
     cross_dedup,
     run_all,
+    run_and_persist,
 )
+from tdc_auction_calendar.models.health import CollectorHealthRow
 from tdc_auction_calendar.models import Auction
+from tdc_auction_calendar.models import AuctionRow
 
 
 def _make_auction(**overrides) -> Auction:
@@ -202,3 +205,68 @@ class TestRunAll:
             _, report = await run_all()
 
         assert report.duration_seconds >= 0
+
+
+class TestRunAndPersist:
+    async def test_persists_auctions(self, db_session):
+        """run_and_persist writes auctions to DB."""
+        _SuccessCollector._auctions = [_make_auction()]
+
+        with patch.dict(
+            "tdc_auction_calendar.collectors.orchestrator.COLLECTORS",
+            {"success": _SuccessCollector},
+            clear=True,
+        ):
+            report = await run_and_persist(db_session)
+
+        assert report.new_records == 1
+        assert db_session.query(AuctionRow).count() == 1
+
+    async def test_saves_health_on_success(self, db_session):
+        """run_and_persist records health for successful collectors."""
+        _SuccessCollector._auctions = [_make_auction()]
+
+        with patch.dict(
+            "tdc_auction_calendar.collectors.orchestrator.COLLECTORS",
+            {"success": _SuccessCollector},
+            clear=True,
+        ):
+            await run_and_persist(db_session)
+
+        health = db_session.query(CollectorHealthRow).filter_by(
+            collector_name="success"
+        ).one()
+        assert health.records_collected == 1
+        assert health.error_message is None
+
+    async def test_saves_health_on_failure(self, db_session):
+        """run_and_persist records health for failed collectors."""
+        with patch.dict(
+            "tdc_auction_calendar.collectors.orchestrator.COLLECTORS",
+            {"fail": _FailCollector},
+            clear=True,
+        ):
+            report = await run_and_persist(db_session)
+
+        assert len(report.collectors_failed) == 1
+        health = db_session.query(CollectorHealthRow).filter_by(
+            collector_name="fail"
+        ).one()
+        assert health.error_message is not None
+
+    async def test_report_includes_upsert_counts(self, db_session):
+        """run_and_persist populates new/updated/skipped on report."""
+        _SuccessCollector._auctions = [
+            _make_auction(county="Miami-Dade"),
+            _make_auction(county="Broward"),
+        ]
+
+        with patch.dict(
+            "tdc_auction_calendar.collectors.orchestrator.COLLECTORS",
+            {"success": _SuccessCollector},
+            clear=True,
+        ):
+            report = await run_and_persist(db_session)
+
+        assert report.new_records == 2
+        assert report.total_records == 2

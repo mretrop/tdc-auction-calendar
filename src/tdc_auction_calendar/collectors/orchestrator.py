@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
-
 import structlog
 
 from tdc_auction_calendar.collectors.base import BaseCollector
@@ -28,8 +26,9 @@ from tdc_auction_calendar.collectors.statutory import StatutoryCollector
 from tdc_auction_calendar.models.auction import Auction, DeduplicationKey
 from tdc_auction_calendar.models.health import CollectorError, RunReport
 
-if TYPE_CHECKING:
-    from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session
+
+from tdc_auction_calendar.db.upsert import save_collector_health, upsert_auctions
 
 logger = structlog.get_logger()
 
@@ -119,3 +118,36 @@ async def run_all(
     )
 
     return deduped, report
+
+
+async def run_and_persist(
+    session: Session,
+    collectors: list[str] | None = None,
+) -> RunReport:
+    """Run all collectors and persist results to the database."""
+    auctions, report = await run_all(collectors)
+
+    # Upsert auctions
+    upsert_result = upsert_auctions(session, auctions)
+    report.new_records = upsert_result.new
+    report.updated_records = upsert_result.updated
+    report.skipped_records = upsert_result.skipped
+
+    # Save health for each collector (using per-collector counts)
+    for name in report.collectors_succeeded:
+        save_collector_health(
+            session,
+            name=name,
+            success=True,
+            records=report.per_collector_counts.get(name, 0),
+            error=None,
+        )
+    for err in report.collectors_failed:
+        save_collector_health(
+            session, name=err.name, success=False, records=0, error=err.error
+        )
+
+    # Single commit for all DB writes
+    session.commit()
+
+    return report
