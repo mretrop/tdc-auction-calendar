@@ -275,3 +275,32 @@ class TestStatus:
         result = runner.invoke(app, ["status"])
         assert "statutory" in result.output
         assert "100" in result.output
+
+
+from tdc_auction_calendar.models.jurisdiction import StateRulesRow
+
+
+class TestStates:
+    def test_states_no_db_exits_1(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'nope.db'}")
+        result = runner.invoke(app, ["states"])
+        assert result.exit_code == 1
+
+    def test_states_shows_data(self, cli_db):
+        with SASession(cli_db) as session:
+            session.add(StateRulesRow(
+                state="FL", sale_type="deed",
+                typical_months=[3, 4, 5],
+                redemption_period_months=None,
+            ))
+            session.commit()
+
+        result = runner.invoke(app, ["states"])
+        assert result.exit_code == 0
+        assert "FL" in result.output
+        assert "deed" in result.output
+        assert "Mar" in result.output
+
+    def test_states_empty_prints_message(self, cli_db):
+        result = runner.invoke(app, ["states"])
+        assert "No states found" in result.output
