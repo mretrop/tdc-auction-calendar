@@ -1,19 +1,22 @@
 """CLI interface for TDC Auction Calendar."""
 
 import asyncio
+import calendar
 import datetime
 import logging
 import os
 
 import typer
 from rich.console import Console
+from sqlalchemy import func
 
 from tdc_auction_calendar.collectors.orchestrator import COLLECTORS, run_and_persist
 from tdc_auction_calendar.db.database import get_engine, get_session
+from tdc_auction_calendar.db.upsert import get_collector_health
 from tdc_auction_calendar.log_config import configure_logging
 from tdc_auction_calendar.models.auction import AuctionRow
 from tdc_auction_calendar.models.enums import SaleType
-from tdc_auction_calendar.models.jurisdiction import Base
+from tdc_auction_calendar.models.jurisdiction import Base, CountyInfoRow, StateRulesRow
 
 console = Console(width=200)
 
@@ -208,6 +211,148 @@ def list_auctions(
             row.status,
             row.source_type,
             f"{row.confidence_score:.0%}",
+        )
+
+    console.print(table)
+
+
+@app.command()
+def status() -> None:
+    """Show database stats and collector health."""
+    from rich.table import Table
+
+    if not _check_db_exists():
+        console.print("[red]Database not found.[/red] Run `tdc-auction-calendar collect` first.")
+        raise typer.Exit(1)
+
+    session = get_session()
+    try:
+        # DB stats
+        total = session.query(func.count(AuctionRow.id)).scalar() or 0
+        console.print(f"\n[bold]Database Stats[/bold]")
+        console.print(f"Total auctions: {total}")
+
+        if total > 0:
+            by_state = (
+                session.query(AuctionRow.state, func.count(AuctionRow.id))
+                .group_by(AuctionRow.state)
+                .order_by(func.count(AuctionRow.id).desc())
+                .all()
+            )
+            console.print("\nBy state:")
+            for state, count in by_state:
+                console.print(f"  {state}: {count}")
+
+            by_source = (
+                session.query(AuctionRow.source_type, func.count(AuctionRow.id))
+                .group_by(AuctionRow.source_type)
+                .order_by(func.count(AuctionRow.id).desc())
+                .all()
+            )
+            console.print("\nBy source:")
+            for source, count in by_source:
+                console.print(f"  {source}: {count}")
+
+        # Collector health
+        health = get_collector_health(session)
+    finally:
+        session.close()
+
+    if health:
+        console.print(f"\n[bold]Collector Health[/bold]")
+        table = Table()
+        table.add_column("Collector", style="cyan")
+        table.add_column("Last Run")
+        table.add_column("Last Success")
+        table.add_column("Records", justify="right")
+        table.add_column("Error")
+
+        for h in health:
+            table.add_row(
+                h.collector_name,
+                str(h.last_run.strftime("%Y-%m-%d %H:%M")) if h.last_run else "-",
+                str(h.last_success.strftime("%Y-%m-%d %H:%M")) if h.last_success else "-",
+                str(h.records_collected),
+                h.error_message or "",
+            )
+        console.print(table)
+    else:
+        console.print("\nNo collector health data. Run `collect` first.")
+
+
+@app.command()
+def states() -> None:
+    """List all states with sale type and typical months."""
+    from rich.table import Table
+
+    if not _check_db_exists():
+        console.print("[red]Database not found.[/red] Run `tdc-auction-calendar collect` first.")
+        raise typer.Exit(1)
+
+    session = get_session()
+    try:
+        rows = session.query(StateRulesRow).order_by(StateRulesRow.state).all()
+    finally:
+        session.close()
+
+    if not rows:
+        console.print("No states found.")
+        return
+
+    table = Table(title="State Rules")
+    table.add_column("State", style="cyan")
+    table.add_column("Sale Type")
+    table.add_column("Typical Months")
+    table.add_column("Redemption (months)", justify="right")
+
+    for row in rows:
+        months = ""
+        if row.typical_months:
+            months = ", ".join(calendar.month_abbr[m] for m in row.typical_months)
+        redemption = str(row.redemption_period_months) if row.redemption_period_months is not None else "-"
+        table.add_row(row.state, row.sale_type, months, redemption)
+
+    console.print(table)
+
+
+@app.command()
+def counties(
+    state: str | None = typer.Option(None, "--state", help="Filter by state code"),
+) -> None:
+    """List counties with vendor and tax sale page info."""
+    from rich.table import Table
+
+    if not _check_db_exists():
+        console.print("[red]Database not found.[/red] Run `tdc-auction-calendar collect` first.")
+        raise typer.Exit(1)
+
+    session = get_session()
+    try:
+        query = session.query(CountyInfoRow)
+        if state:
+            query = query.filter(CountyInfoRow.state == state.upper())
+        rows = query.order_by(CountyInfoRow.state, CountyInfoRow.county_name).all()
+    finally:
+        session.close()
+
+    if not rows:
+        console.print("No counties found.")
+        return
+
+    table = Table(title="Counties")
+    table.add_column("State", style="cyan")
+    table.add_column("County")
+    table.add_column("Vendor")
+    table.add_column("Tax Sale Page")
+    table.add_column("Priority")
+
+    for row in rows:
+        table.add_row(
+            row.state,
+            row.county_name,
+            row.known_auction_vendor or "-",
+            row.tax_sale_page_url or "-",
+            row.priority,
         )
 
     console.print(table)

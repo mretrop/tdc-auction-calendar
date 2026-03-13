@@ -234,3 +234,44 @@ class TestList:
         result = runner.invoke(app, ["list", "--sale-type", "deed"])
         assert "Miami-Dade" in result.output
         assert "Broward" not in result.output
+
+
+from tdc_auction_calendar.models.health import CollectorHealthRow
+
+
+class TestStatus:
+    def test_status_no_db_exits_1(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'nope.db'}")
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 1
+        assert "Database not found" in result.output
+
+    def test_status_shows_stats(self, cli_db):
+        with SASession(cli_db) as session:
+            session.add(AuctionRow(
+                state="FL", county="Miami-Dade",
+                start_date=_future_date(),
+                sale_type="deed", status="upcoming",
+                source_type="statutory", confidence_score=0.4,
+            ))
+            session.commit()
+
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 0
+        assert "1" in result.output  # total count
+        assert "FL" in result.output
+
+    def test_status_shows_collector_health(self, cli_db):
+        now = datetime.datetime.now(datetime.timezone.utc)
+        with SASession(cli_db) as session:
+            session.add(CollectorHealthRow(
+                collector_name="statutory",
+                last_run=now,
+                last_success=now,
+                records_collected=100,
+            ))
+            session.commit()
+
+        result = runner.invoke(app, ["status"])
+        assert "statutory" in result.output
+        assert "100" in result.output
