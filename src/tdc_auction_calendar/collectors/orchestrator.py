@@ -66,9 +66,56 @@ def cross_dedup(auctions: list[Auction]) -> list[Auction]:
     return list(best.values())
 
 
-async def run_all() -> tuple[list[Auction], RunReport]:
-    """Run all registered collectors, deduplicate, and return results with report.
+async def run_all(
+    collectors: list[str] | None = None,
+) -> tuple[list[Auction], RunReport]:
+    """Run collectors sequentially, deduplicate, and return results with report."""
+    # 1. Resolve collector list
+    if collectors is not None:
+        unknown = set(collectors) - set(COLLECTORS)
+        if unknown:
+            raise ValueError(f"Unknown collector names: {sorted(unknown)}")
+        to_run = {name: COLLECTORS[name] for name in collectors}
+    else:
+        to_run = COLLECTORS
 
-    Placeholder — full implementation in Task 5.
-    """
-    raise NotImplementedError("run_all will be implemented in Task 5")
+    # 2. Execute sequentially
+    start = time.monotonic()
+    all_auctions: list[Auction] = []
+    succeeded: list[str] = []
+    failed: list[CollectorError] = []
+    per_collector_counts: dict[str, int] = {}
+
+    for name, cls in to_run.items():
+        logger.info("collector_start", collector=name)
+        try:
+            collector = cls()
+            results = await collector.collect()
+            all_auctions.extend(results)
+            succeeded.append(name)
+            per_collector_counts[name] = len(results)
+            logger.info("collector_complete", collector=name, records=len(results))
+        except Exception as exc:
+            failed.append(
+                CollectorError(
+                    name=name,
+                    error=str(exc),
+                    error_type=type(exc).__name__,
+                )
+            )
+            logger.warning("collector_failed", collector=name, error=str(exc))
+
+    # 3. Cross-collector dedup
+    deduped = cross_dedup(all_auctions)
+
+    # 4. Build report
+    elapsed = time.monotonic() - start
+    report = RunReport(
+        total_records=len(deduped),
+        collectors_succeeded=succeeded,
+        collectors_failed=failed,
+        per_collector_counts=per_collector_counts,
+        duration_seconds=round(elapsed, 3),
+    )
+
+    return deduped, report

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -60,3 +60,145 @@ class TestCrossDedup:
 
         assert len(result) == 1
         assert result[0].notes == "first"
+
+
+from tdc_auction_calendar.collectors.base import BaseCollector
+from tdc_auction_calendar.models.enums import SourceType
+
+
+class _SuccessCollector(BaseCollector):
+    """Mock collector that returns fixed auctions."""
+
+    _auctions: list[Auction] = []
+
+    @property
+    def name(self) -> str:
+        return "success_collector"
+
+    @property
+    def source_type(self) -> SourceType:
+        return SourceType.STATUTORY
+
+    async def _fetch(self) -> list[Auction]:
+        return self._auctions
+
+    def normalize(self, raw: dict) -> Auction:
+        return Auction(**raw)
+
+
+@pytest.fixture(autouse=True)
+def _reset_mock_collectors():
+    """Reset shared mock collector state between tests."""
+    _SuccessCollector._auctions = []
+    yield
+    _SuccessCollector._auctions = []
+
+
+class _FailCollector(BaseCollector):
+    """Mock collector that always raises."""
+
+    @property
+    def name(self) -> str:
+        return "fail_collector"
+
+    @property
+    def source_type(self) -> SourceType:
+        return SourceType.STATUTORY
+
+    async def _fetch(self) -> list[Auction]:
+        raise ConnectionError("site down")
+
+    def normalize(self, raw: dict) -> Auction:
+        return Auction(**raw)
+
+
+class TestRunAll:
+    async def test_collects_from_all(self):
+        """run_all returns auctions from all collectors."""
+        _SuccessCollector._auctions = [
+            _make_auction(county="Miami-Dade"),
+        ]
+
+        with patch.dict(
+            "tdc_auction_calendar.collectors.orchestrator.COLLECTORS",
+            {"success": _SuccessCollector},
+            clear=True,
+        ):
+            auctions, report = await run_all()
+
+        assert len(auctions) == 1
+        assert report.total_records == 1
+        assert report.collectors_succeeded == ["success"]
+        assert report.collectors_failed == []
+
+    async def test_failure_isolation(self):
+        """One collector failure does not stop others."""
+        _SuccessCollector._auctions = [
+            _make_auction(county="Broward"),
+        ]
+
+        with patch.dict(
+            "tdc_auction_calendar.collectors.orchestrator.COLLECTORS",
+            {"success": _SuccessCollector, "fail": _FailCollector},
+            clear=True,
+        ):
+            auctions, report = await run_all()
+
+        assert len(auctions) == 1
+        assert "success" in report.collectors_succeeded
+        assert len(report.collectors_failed) == 1
+        assert report.collectors_failed[0].name == "fail"
+        assert report.collectors_failed[0].error_type == "ConnectionError"
+
+    async def test_cross_dedup_applied(self):
+        """Cross-collector dedup keeps highest confidence."""
+        _SuccessCollector._auctions = [
+            _make_auction(confidence_score=0.40, source_type="statutory"),
+            _make_auction(confidence_score=0.85, source_type="state_agency"),
+        ]
+
+        with patch.dict(
+            "tdc_auction_calendar.collectors.orchestrator.COLLECTORS",
+            {"success": _SuccessCollector},
+            clear=True,
+        ):
+            auctions, report = await run_all()
+
+        assert len(auctions) == 1
+        assert auctions[0].confidence_score == 0.85
+
+    async def test_filter_by_name(self):
+        """run_all filters to requested collector names."""
+        _SuccessCollector._auctions = [_make_auction()]
+
+        with patch.dict(
+            "tdc_auction_calendar.collectors.orchestrator.COLLECTORS",
+            {"a": _SuccessCollector, "b": _SuccessCollector},
+            clear=True,
+        ):
+            auctions, report = await run_all(collectors=["a"])
+
+        assert report.collectors_succeeded == ["a"]
+
+    async def test_unknown_name_raises(self):
+        """Unknown collector name raises ValueError."""
+        with patch.dict(
+            "tdc_auction_calendar.collectors.orchestrator.COLLECTORS",
+            {"a": _SuccessCollector},
+            clear=True,
+        ):
+            with pytest.raises(ValueError, match="Unknown collector"):
+                await run_all(collectors=["nonexistent"])
+
+    async def test_report_duration(self):
+        """RunReport includes positive duration_seconds."""
+        _SuccessCollector._auctions = []
+
+        with patch.dict(
+            "tdc_auction_calendar.collectors.orchestrator.COLLECTORS",
+            {"a": _SuccessCollector},
+            clear=True,
+        ):
+            _, report = await run_all()
+
+        assert report.duration_seconds >= 0
