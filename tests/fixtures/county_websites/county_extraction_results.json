@@ -1,0 +1,614 @@
+{
+  "https://treasurer.acgov.org/tax-defaulted-land/": [
+    {
+      "sale_date": "2026-03-01",
+      "sale_type": "deed",
+      "end_date": "2026-03-03",
+      "deposit_amount": "5000",
+      "registration_deadline": "2026-03-01"
+    },
+    {
+      "sale_date": "2026-06-01",
+      "sale_type": "deed",
+      "deposit_amount": "2500"
+    }
+  ],
+  "https://www.contracosta.ca.gov/2218/Public-Auction-Information": [
+    {
+      "sale_date": "2026-04-02",
+      "sale_type": ""
+    }
+  ],
+  "https://www.fresnocountyca.gov/Departments/Auditor-Controller-Treasurer-Tax-Collector/Property-Tax-Information/Tax-Sale-Excess-Proceeds": [
+    {
+      "sale_date": "2026-05-03"
+    }
+  ],
+  "https://www.kerncounty.com/services/property-land-and-taxes/property-tax-portal/tax-defaulted-property-sales": [
+    {
+      "sale_date": "2026-06-04",
+      "sale_type": "deed"
+    }
+  ],
+  "https://ttc.lacounty.gov/auction-general-information/": [
+    {
+      "sale_date": "2026-07-05",
+      "sale_type": "deed"
+    },
+    {
+      "sale_date": "2026-10-05",
+      "sale_type": "deed"
+    }
+  ],
+  "https://www.marincounty.gov/departments/finance/property-tax/tax-defaulted-land-sales": [
+    {
+      "sale_date": "2026-08-06",
+      "sale_type": "deed",
+      "end_date": "2026-08-08",
+      "deposit_amount": "5500",
+      "registration_deadline": "2026-08-01"
+    }
+  ],
+  "https://www.mendocinocounty.gov/government/collections/treasurer-tax-collector/tax-defaulted-property-auction": [
+    {
+      "sale_date": "2026-09-07",
+      "sale_type": ""
+    }
+  ],
+  "https://www.octreasurer.gov/taxauction": [
+    {
+      "sale_date": "2026-10-08"
+    }
+  ],
+  "https://countytreasurer.org/tax-collector/tax-sale-information": [
+    {
+      "sale_date": "2026-11-09",
+      "sale_type": "deed"
+    },
+    {
+      "sale_date": "2026-12-09",
+      "sale_type": "deed"
+    }
+  ],
+  "https://finance.saccounty.gov/Tax/pages/taxsale.aspx": [
+    {
+      "sale_date": "2026-12-10",
+      "sale_type": "deed"
+    }
+  ],
+  "https://www.mytaxcollector.com/trTaxsale_TC.aspx": [
+    {
+      "sale_date": "2026-03-11",
+      "sale_type": "deed",
+      "end_date": "2026-03-13",
+      "deposit_amount": "6000",
+      "registration_deadline": "2026-03-06"
+    }
+  ],
+  "https://www.sdttc.com/content/ttc/en/tax-collection/property-tax-sales.html": [
+    {
+      "sale_date": "2026-04-12",
+      "sale_type": ""
+    }
+  ],
+  "https://www.sjgov.org/department/ttc/tax/redemption/public-auction": [
+    {
+      "sale_date": "2026-05-13"
+    },
+    {
+      "sale_date": "2026-08-13",
+      "sale_type": "deed",
+      "deposit_amount": "2500"
+    }
+  ],
+  "https://www.slocounty.ca.gov/departments/auditor-controller-treasurer-tax-collector-public/tax-collector/services/public-auction-of-tax-defaulted-property": [
+    {
+      "sale_date": "2026-06-14",
+      "sale_type": "deed"
+    }
+  ],
+  "https://dtac.santaclaracounty.gov/taxes/public-auction-tax-defaulted-properties": [
+    {
+      "sale_date": "2026-07-15",
+      "sale_type": "deed"
+    }
+  ],
+  "https://www.shastacounty.gov/tax-collector/page/tax-auction": [
+    {
+      "sale_date": "2026-08-16",
+      "sale_type": "deed",
+      "end_date": "2026-08-18",
+      "deposit_amount": "6500",
+      "registration_deadline": "2026-08-11"
+    }
+  ],
+  "https://www.solanocounty.gov/government/treasurer-tax-collector-county-clerk/tax-collector/tax-sale-general-information": [
+    {
+      "sale_date": "2026-09-17",
+      "sale_type": ""
+    },
+    {
+      "sale_date": "2026-12-17",
+      "sale_type": "deed"
+    }
+  ],
+  "https://sonomacounty.gov/administrative-support-and-fiscal-services/auditor-controller-treasurer-tax-collector/divisions/revenue-accounting/tax-defaulted-property-auctions": [
+    {
+      "sale_date": "2026-10-18"
+    }
+  ],
+  "https://www.stancounty.com/tr-tax/auction/tax-sale-auction.shtm": [
+    {
+      "sale_date": "2026-11-19",
+      "sale_type": "deed"
+    }
+  ],
+  "https://venturacounty.gov/ttc/current-auction/": [
+    {
+      "sale_date": "2026-12-20",
+      "sale_type": "deed"
+    }
+  ],
+  "https://adcogov.org/tax-lien-sale": [
+    {
+      "sale_date": "2026-03-21",
+      "sale_type": "lien",
+      "end_date": "2026-03-23",
+      "deposit_amount": "7000",
+      "registration_deadline": "2026-03-16"
+    },
+    {
+      "sale_date": "2026-06-21",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.arapahoeco.gov/your_county/county_departments/treasurer/tax_lien_sale/index.php": [
+    {
+      "sale_date": "2026-04-22",
+      "sale_type": ""
+    }
+  ],
+  "https://bouldercounty.gov/property-and-land/treasurer/taxes/tax-lien-sale/": [
+    {
+      "sale_date": "2026-05-23"
+    }
+  ],
+  "https://www.deltacountyco.gov/842/Rules-for-Annual-Tax-Lien-Sale": [
+    {
+      "sale_date": "2026-06-24",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.denvergov.org/content/denvergov/en/denver-department-of-finance/our-divisions/treasury-division/property-taxes/delinquent-taxes-and-tax-lien-sale.html": [
+    {
+      "sale_date": "2026-07-25",
+      "sale_type": "lien"
+    },
+    {
+      "sale_date": "2026-10-25",
+      "sale_type": "lien",
+      "deposit_amount": "2500"
+    }
+  ],
+  "https://www.douglas.co.us/treasurer/tax-lien-sale-information/": [
+    {
+      "sale_date": "2026-08-01",
+      "sale_type": "lien",
+      "end_date": "2026-08-03",
+      "deposit_amount": "7500",
+      "registration_deadline": "2026-08-01"
+    }
+  ],
+  "https://www.eaglecounty.us/departments___services/treasurer___public_trustee_office/treasurer/tax_lien_sale.php": [
+    {
+      "sale_date": "2026-09-02",
+      "sale_type": ""
+    }
+  ],
+  "https://treasurer.elpasoco.com/county-treasurer/tax-lien-sale/": [
+    {
+      "sale_date": "2026-10-03"
+    }
+  ],
+  "https://fremontcountyco.gov/treasurer/tax-lien-sale-information": [
+    {
+      "sale_date": "2026-11-04",
+      "sale_type": "lien"
+    },
+    {
+      "sale_date": "2026-12-04",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.garfieldcountyco.gov/treasurer/tax-lien-sale/": [
+    {
+      "sale_date": "2026-12-05",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.gunnisoncounty.org/213/Online-Tax-Lien-Sale": [
+    {
+      "sale_date": "2026-03-06",
+      "sale_type": "lien",
+      "end_date": "2026-03-08",
+      "deposit_amount": "8000",
+      "registration_deadline": "2026-03-01"
+    }
+  ],
+  "https://www.jeffco.us/2430/Tax-Lien-Sale": [
+    {
+      "sale_date": "2026-04-07",
+      "sale_type": ""
+    }
+  ],
+  "https://www.larimer.gov/treasurer/thirdparty/liens/sale": [
+    {
+      "sale_date": "2026-05-08"
+    },
+    {
+      "sale_date": "2026-08-08",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.mesacounty.us/departments-and-services/treasurer/tax-sale-information": [
+    {
+      "sale_date": "2026-06-09",
+      "sale_type": "lien"
+    }
+  ],
+  "https://morgancounty.colorado.gov/tax-lien-sale": [
+    {
+      "sale_date": "2026-07-10",
+      "sale_type": "lien"
+    }
+  ],
+  "https://county.pueblo.org/treasurers-department/2025-tax-lien-sale-information": [
+    {
+      "sale_date": "2026-08-11",
+      "sale_type": "lien",
+      "end_date": "2026-08-13",
+      "deposit_amount": "8500",
+      "registration_deadline": "2026-08-06"
+    }
+  ],
+  "https://www.summitcountyco.gov/services/treasurer_public_trustee/treasurer/tax_liens.php": [
+    {
+      "sale_date": "2026-09-12",
+      "sale_type": ""
+    },
+    {
+      "sale_date": "2026-12-12",
+      "sale_type": "lien",
+      "deposit_amount": "2500"
+    }
+  ],
+  "https://www.tellercounty.gov/Treasurers-Office": [
+    {
+      "sale_date": "2026-10-13"
+    }
+  ],
+  "https://www.weld.gov/Government/Departments/Treasurer-Public-Trustee/Treasurer/Tax-Lien-Sale-Information": [
+    {
+      "sale_date": "2026-11-14",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.alachuacollector.com/property-taxes/": [
+    {
+      "sale_date": "2026-12-15",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.brevardclerk.us/tax-deeds": [
+    {
+      "sale_date": "2026-03-16",
+      "sale_type": "lien",
+      "end_date": "2026-03-18",
+      "deposit_amount": "9000",
+      "registration_deadline": "2026-03-11"
+    },
+    {
+      "sale_date": "2026-06-16",
+      "sale_type": "lien"
+    }
+  ],
+  "https://browardtax.org/faqs/tax-certificate-sale/": [
+    {
+      "sale_date": "2026-04-17",
+      "sale_type": ""
+    }
+  ],
+  "https://www.charlottetaxcollector.com/": [
+    {
+      "sale_date": "2026-05-18"
+    }
+  ],
+  "https://www.collierclerk.com/court-operations/tax-deed-sales": [
+    {
+      "sale_date": "2026-06-19",
+      "sale_type": "lien"
+    }
+  ],
+  "https://taxcollector.jacksonville.gov/taxes/property-taxes/tax-sale,-certificates,-and-tax-deeds": [
+    {
+      "sale_date": "2026-07-20",
+      "sale_type": "lien"
+    },
+    {
+      "sale_date": "2026-10-20",
+      "sale_type": "lien"
+    }
+  ],
+  "https://escambiataxcollector.com/property-tax/certificate-sale/": [
+    {
+      "sale_date": "2026-08-21",
+      "sale_type": "lien",
+      "end_date": "2026-08-23",
+      "deposit_amount": "9500",
+      "registration_deadline": "2026-08-16"
+    }
+  ],
+  "https://www.hillstaxfl.gov/taxes/tax-certificate/": [
+    {
+      "sale_date": "2026-09-22",
+      "sale_type": ""
+    }
+  ],
+  "https://leetc.com/tax-certificates/": [
+    {
+      "sale_date": "2026-10-23"
+    }
+  ],
+  "https://www.leontaxcollector.net/Services/property-taxes/Annual-Tax-Sale": [
+    {
+      "sale_date": "2026-11-24",
+      "sale_type": "lien"
+    },
+    {
+      "sale_date": "2026-12-24",
+      "sale_type": "lien",
+      "deposit_amount": "2500"
+    }
+  ],
+  "https://www.taxcollector.com/services/property-tax/tax-certs.cfm": [
+    {
+      "sale_date": "2026-12-25",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.mariontax.com/tax-certificate-deed-sales": [
+    {
+      "sale_date": "2026-03-01",
+      "sale_type": "lien",
+      "end_date": "2026-03-03",
+      "deposit_amount": "10000",
+      "registration_deadline": "2026-03-01"
+    }
+  ],
+  "https://mdctaxcollector.gov/services/tax-certificate-sales": [
+    {
+      "sale_date": "2026-04-02",
+      "sale_type": ""
+    }
+  ],
+  "https://okaloosatax.com/certificatesale/": [
+    {
+      "sale_date": "2026-05-03"
+    },
+    {
+      "sale_date": "2026-08-03",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.octaxcol.com/taxes/about-property-tax/tax-certificate-deed-sales/": [
+    {
+      "sale_date": "2026-06-04",
+      "sale_type": "lien"
+    }
+  ],
+  "https://osceolataxcollector.org/tax-certificate-information/": [
+    {
+      "sale_date": "2026-07-05",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.pbctax.gov/taxes/property-tax/tax-certificates-and-deeds/": [
+    {
+      "sale_date": "2026-08-06",
+      "sale_type": "lien",
+      "end_date": "2026-08-08",
+      "deposit_amount": "10500",
+      "registration_deadline": "2026-08-01"
+    }
+  ],
+  "https://www.pascotaxes.com/taxes/tax-information/delinquent-real-estate-taxes/tax-sale-information/": [
+    {
+      "sale_date": "2026-09-07",
+      "sale_type": ""
+    },
+    {
+      "sale_date": "2026-12-07",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.pinellastaxcollector.gov/property-tax/tax-certificate-and-tax-deed/": [
+    {
+      "sale_date": "2026-10-08"
+    }
+  ],
+  "https://www.polktaxes.com/services/delinquency-and-tax-sale-information/": [
+    {
+      "sale_date": "2026-11-09",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.sarasotataxcollector.gov/services/tax-services/property-tax/tax-cert-sale": [
+    {
+      "sale_date": "2026-12-10",
+      "sale_type": "lien"
+    }
+  ],
+  "http://www.seminoletax.org/property-tax/tax-sale-faq.html": [
+    {
+      "sale_date": "2026-03-11",
+      "sale_type": "lien",
+      "end_date": "2026-03-13",
+      "deposit_amount": "11000",
+      "registration_deadline": "2026-03-06"
+    },
+    {
+      "sale_date": "2026-06-11",
+      "sale_type": "lien",
+      "deposit_amount": "2500"
+    }
+  ],
+  "https://sjctax.us/tax-certificate-sales/": [
+    {
+      "sale_date": "2026-04-12",
+      "sale_type": ""
+    }
+  ],
+  "https://vctaxcollector.org/taxes/tax-certificate-info.html": [
+    {
+      "sale_date": "2026-05-13"
+    }
+  ],
+  "https://www.hennepin.us/residents/property/tax-forfeited-land": [
+    {
+      "sale_date": "2026-06-14",
+      "sale_type": "deed"
+    }
+  ],
+  "https://www.ramseycountymn.gov/residents/property-home/taxes-values/productive-properties/tax-forfeited-public-sales": [
+    {
+      "sale_date": "2026-07-15",
+      "sale_type": "deed"
+    },
+    {
+      "sale_date": "2026-10-15",
+      "sale_type": "deed"
+    }
+  ],
+  "https://tax.mecknc.gov/services/tax-foreclosure-properties": [
+    {
+      "sale_date": "2026-08-16",
+      "sale_type": "deed",
+      "end_date": "2026-08-18",
+      "deposit_amount": "11500",
+      "registration_deadline": "2026-08-11"
+    }
+  ],
+  "https://www.wake.gov/departments-government/tax-administration/payment-information/delinquent-taxes": [
+    {
+      "sale_date": "2026-09-17",
+      "sale_type": ""
+    }
+  ],
+  "https://www.atlantic-county.org/taxation/": [
+    {
+      "sale_date": "2026-10-18"
+    }
+  ],
+  "http://www.bergentcta.org/taxsale/": [
+    {
+      "sale_date": "2026-11-19",
+      "sale_type": "lien"
+    },
+    {
+      "sale_date": "2026-12-19",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.co.burlington.nj.us/127/Board-of-Taxation": [
+    {
+      "sale_date": "2026-12-20",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.camdencounty.com/service/taxes/board-of-taxation/": [
+    {
+      "sale_date": "2026-03-21",
+      "sale_type": "lien",
+      "end_date": "2026-03-23",
+      "deposit_amount": "12000",
+      "registration_deadline": "2026-03-16"
+    }
+  ],
+  "https://www.essexcountynjtaxboard.org/": [
+    {
+      "sale_date": "2026-04-22",
+      "sale_type": ""
+    }
+  ],
+  "https://www.hudsoncountynj.org/departments/taxation": [
+    {
+      "sale_date": "2026-05-23"
+    },
+    {
+      "sale_date": "2026-08-23",
+      "sale_type": "lien",
+      "deposit_amount": "2500"
+    }
+  ],
+  "https://www.middlesexcountynj.gov/government/departments/department-of-finance/board-of-taxation": [
+    {
+      "sale_date": "2026-06-24",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.visitmonmouth.com/page.aspx?Id=2516": [
+    {
+      "sale_date": "2026-07-25",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.morriscountynj.gov/Departments/Board-of-Taxation": [
+    {
+      "sale_date": "2026-08-01",
+      "sale_type": "lien",
+      "end_date": "2026-08-03",
+      "deposit_amount": "12500",
+      "registration_deadline": "2026-08-01"
+    }
+  ],
+  "https://tax.co.ocean.nj.us/": [
+    {
+      "sale_date": "2026-09-02",
+      "sale_type": ""
+    },
+    {
+      "sale_date": "2026-12-02",
+      "sale_type": "lien"
+    }
+  ],
+  "https://alleghenycountytreasurer.us/real-estate-tax/": [
+    {
+      "sale_date": "2026-10-03"
+    }
+  ],
+  "https://www.phila.gov/services/property-lots-housing/foreclosure-sheriff-sales/sheriff-lien-sales/": [
+    {
+      "sale_date": "2026-11-04",
+      "sale_type": "deed"
+    }
+  ],
+  "https://www.charlestoncounty.org/departments/delinquent-tax/tax-sale.php": [
+    {
+      "sale_date": "2026-12-05",
+      "sale_type": "lien"
+    }
+  ],
+  "https://www.greenvillecounty.org/TaxCollector/TaxSaleFAQ.aspx": [
+    {
+      "sale_date": "2026-03-06",
+      "sale_type": "lien",
+      "end_date": "2026-03-08",
+      "deposit_amount": "13000",
+      "registration_deadline": "2026-03-01"
+    },
+    {
+      "sale_date": "2026-06-06",
+      "sale_type": "lien"
+    }
+  ]
+}

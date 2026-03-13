@@ -44,7 +44,7 @@
     "state": "CA",
     "county_name": "Alameda",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://treasurer.acgov.org/tax-defaulted-land/",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "high"
@@ -104,7 +104,7 @@
     "state": "CA",
     "county_name": "Contra Costa",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.contracosta.ca.gov/2218/Public-Auction-Information",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -134,7 +134,7 @@
     "state": "CA",
     "county_name": "Fresno",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.fresnocountyca.gov/Departments/Auditor-Controller-Treasurer-Tax-Collector/Property-Tax-Information/Tax-Sale-Excess-Proceeds",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -184,7 +184,7 @@
     "state": "CA",
     "county_name": "Kern",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.kerncounty.com/services/property-land-and-taxes/property-tax-portal/tax-defaulted-property-sales",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -224,7 +224,7 @@
     "state": "CA",
     "county_name": "Los Angeles",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://ttc.lacounty.gov/auction-general-information/",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "high"
@@ -244,7 +244,7 @@
     "state": "CA",
     "county_name": "Marin",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.marincounty.gov/departments/finance/property-tax/tax-defaulted-land-sales",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -264,7 +264,7 @@
     "state": "CA",
     "county_name": "Mendocino",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.mendocinocounty.gov/government/collections/treasurer-tax-collector/tax-defaulted-property-auction",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -334,7 +334,7 @@
     "state": "CA",
     "county_name": "Orange",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.octreasurer.gov/taxauction",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "high"
@@ -364,7 +364,7 @@
     "state": "CA",
     "county_name": "Riverside",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://countytreasurer.org/tax-collector/tax-sale-information",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "high"
@@ -374,7 +374,7 @@
     "state": "CA",
     "county_name": "Sacramento",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://finance.saccounty.gov/Tax/pages/taxsale.aspx",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "high"
@@ -394,7 +394,7 @@
     "state": "CA",
     "county_name": "San Bernardino",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.mytaxcollector.com/trTaxsale_TC.aspx",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "high"
@@ -404,7 +404,7 @@
     "state": "CA",
     "county_name": "San Diego",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.sdttc.com/content/ttc/en/tax-collection/property-tax-sales.html",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "high"
@@ -424,7 +424,7 @@
     "state": "CA",
     "county_name": "San Joaquin",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.sjgov.org/department/ttc/tax/redemption/public-auction",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -434,7 +434,7 @@
     "state": "CA",
     "county_name": "San Luis Obispo",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.slocounty.ca.gov/departments/auditor-controller-treasurer-tax-collector-public/tax-collector/services/public-auction-of-tax-defaulted-property",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -464,7 +464,7 @@
     "state": "CA",
     "county_name": "Santa Clara",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://dtac.santaclaracounty.gov/taxes/public-auction-tax-defaulted-properties",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "high"
@@ -484,7 +484,7 @@
     "state": "CA",
     "county_name": "Shasta",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.shastacounty.gov/tax-collector/page/tax-auction",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -514,7 +514,7 @@
     "state": "CA",
     "county_name": "Solano",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.solanocounty.gov/government/treasurer-tax-collector-county-clerk/tax-collector/tax-sale-general-information",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -524,7 +524,7 @@
     "state": "CA",
     "county_name": "Sonoma",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://sonomacounty.gov/administrative-support-and-fiscal-services/auditor-controller-treasurer-tax-collector/divisions/revenue-accounting/tax-defaulted-property-auctions",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -534,7 +534,7 @@
     "state": "CA",
     "county_name": "Stanislaus",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.stancounty.com/tr-tax/auction/tax-sale-auction.shtm",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -594,7 +594,7 @@
     "state": "CA",
     "county_name": "Ventura",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://venturacounty.gov/ttc/current-auction/",
     "known_auction_vendor": null,
     "timezone": "America/Los_Angeles",
     "priority": "medium"
@@ -624,7 +624,7 @@
     "state": "CO",
     "county_name": "Adams",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://adcogov.org/tax-lien-sale",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "high"
@@ -644,7 +644,7 @@
     "state": "CO",
     "county_name": "Arapahoe",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.arapahoeco.gov/your_county/county_departments/treasurer/tax_lien_sale/index.php",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "high"
@@ -684,7 +684,7 @@
     "state": "CO",
     "county_name": "Boulder",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://bouldercounty.gov/property-and-land/treasurer/taxes/tax-lien-sale/",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -774,7 +774,7 @@
     "state": "CO",
     "county_name": "Delta",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.deltacountyco.gov/842/Rules-for-Annual-Tax-Lien-Sale",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -784,7 +784,7 @@
     "state": "CO",
     "county_name": "Denver",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.denvergov.org/content/denvergov/en/denver-department-of-finance/our-divisions/treasury-division/property-taxes/delinquent-taxes-and-tax-lien-sale.html",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "high"
@@ -804,7 +804,7 @@
     "state": "CO",
     "county_name": "Douglas",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.douglas.co.us/treasurer/tax-lien-sale-information/",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -814,7 +814,7 @@
     "state": "CO",
     "county_name": "Eagle",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.eaglecounty.us/departments___services/treasurer___public_trustee_office/treasurer/tax_lien_sale.php",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -824,7 +824,7 @@
     "state": "CO",
     "county_name": "El Paso",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://treasurer.elpasoco.com/county-treasurer/tax-lien-sale/",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "high"
@@ -844,7 +844,7 @@
     "state": "CO",
     "county_name": "Fremont",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://fremontcountyco.gov/treasurer/tax-lien-sale-information",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -854,7 +854,7 @@
     "state": "CO",
     "county_name": "Garfield",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.garfieldcountyco.gov/treasurer/tax-lien-sale/",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -884,7 +884,7 @@
     "state": "CO",
     "county_name": "Gunnison",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.gunnisoncounty.org/213/Online-Tax-Lien-Sale",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -924,7 +924,7 @@
     "state": "CO",
     "county_name": "Jefferson",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.jeffco.us/2430/Tax-Lien-Sale",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "high"
@@ -974,7 +974,7 @@
     "state": "CO",
     "county_name": "Larimer",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.larimer.gov/treasurer/thirdparty/liens/sale",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -1014,7 +1014,7 @@
     "state": "CO",
     "county_name": "Mesa",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.mesacounty.us/departments-and-services/treasurer/tax-sale-information",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -1064,7 +1064,7 @@
     "state": "CO",
     "county_name": "Morgan",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://morgancounty.colorado.gov/tax-lien-sale",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -1134,7 +1134,7 @@
     "state": "CO",
     "county_name": "Pueblo",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://county.pueblo.org/treasurers-department/2025-tax-lien-sale-information",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -1214,7 +1214,7 @@
     "state": "CO",
     "county_name": "Summit",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.summitcountyco.gov/services/treasurer_public_trustee/treasurer/tax_liens.php",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -1224,7 +1224,7 @@
     "state": "CO",
     "county_name": "Teller",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.tellercounty.gov/Treasurers-Office",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -1244,7 +1244,7 @@
     "state": "CO",
     "county_name": "Weld",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.weld.gov/Government/Departments/Treasurer-Public-Trustee/Treasurer/Tax-Lien-Sale-Information",
     "known_auction_vendor": null,
     "timezone": "America/Denver",
     "priority": "medium"
@@ -1264,7 +1264,7 @@
     "state": "FL",
     "county_name": "Alachua",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.alachuacollector.com/property-taxes/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1304,7 +1304,7 @@
     "state": "FL",
     "county_name": "Brevard",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.brevardclerk.us/tax-deeds",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1314,7 +1314,7 @@
     "state": "FL",
     "county_name": "Broward",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://browardtax.org/faqs/tax-certificate-sale/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1334,7 +1334,7 @@
     "state": "FL",
     "county_name": "Charlotte",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.charlottetaxcollector.com/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1364,7 +1364,7 @@
     "state": "FL",
     "county_name": "Collier",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.collierclerk.com/court-operations/tax-deed-sales",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1404,7 +1404,7 @@
     "state": "FL",
     "county_name": "Duval",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://taxcollector.jacksonville.gov/taxes/property-taxes/tax-sale,-certificates,-and-tax-deeds",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1414,7 +1414,7 @@
     "state": "FL",
     "county_name": "Escambia",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://escambiataxcollector.com/property-tax/certificate-sale/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/Chicago",
     "priority": "high"
@@ -1534,7 +1534,7 @@
     "state": "FL",
     "county_name": "Hillsborough",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.hillstaxfl.gov/taxes/tax-certificate/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1604,7 +1604,7 @@
     "state": "FL",
     "county_name": "Lee",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://leetc.com/tax-certificates/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1614,7 +1614,7 @@
     "state": "FL",
     "county_name": "Leon",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.leontaxcollector.net/Services/property-taxes/Annual-Tax-Sale",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1654,7 +1654,7 @@
     "state": "FL",
     "county_name": "Manatee",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.taxcollector.com/services/property-tax/tax-certs.cfm",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1664,7 +1664,7 @@
     "state": "FL",
     "county_name": "Marion",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.mariontax.com/tax-certificate-deed-sales",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1684,7 +1684,7 @@
     "state": "FL",
     "county_name": "Miami-Dade",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://mdctaxcollector.gov/services/tax-certificate-sales",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1714,7 +1714,7 @@
     "state": "FL",
     "county_name": "Okaloosa",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://okaloosatax.com/certificatesale/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/Chicago",
     "priority": "high"
@@ -1734,7 +1734,7 @@
     "state": "FL",
     "county_name": "Orange",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.octaxcol.com/taxes/about-property-tax/tax-certificate-deed-sales/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1744,7 +1744,7 @@
     "state": "FL",
     "county_name": "Osceola",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://osceolataxcollector.org/tax-certificate-information/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1754,7 +1754,7 @@
     "state": "FL",
     "county_name": "Palm Beach",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.pbctax.gov/taxes/property-tax/tax-certificates-and-deeds/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1764,7 +1764,7 @@
     "state": "FL",
     "county_name": "Pasco",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.pascotaxes.com/taxes/tax-information/delinquent-real-estate-taxes/tax-sale-information/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1774,7 +1774,7 @@
     "state": "FL",
     "county_name": "Pinellas",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.pinellastaxcollector.gov/property-tax/tax-certificate-and-tax-deed/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1784,7 +1784,7 @@
     "state": "FL",
     "county_name": "Polk",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.polktaxes.com/services/delinquency-and-tax-sale-information/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1814,7 +1814,7 @@
     "state": "FL",
     "county_name": "Sarasota",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.sarasotataxcollector.gov/services/tax-services/property-tax/tax-cert-sale",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1824,7 +1824,7 @@
     "state": "FL",
     "county_name": "Seminole",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "http://www.seminoletax.org/property-tax/tax-sale-faq.html",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1834,7 +1834,7 @@
     "state": "FL",
     "county_name": "St. Johns",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://sjctax.us/tax-certificate-sales/",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -1894,7 +1894,7 @@
     "state": "FL",
     "county_name": "Volusia",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://vctaxcollector.org/taxes/tax-certificate-info.html",
     "known_auction_vendor": "RealAuction",
     "timezone": "America/New_York",
     "priority": "high"
@@ -3114,7 +3114,7 @@
     "state": "MN",
     "county_name": "Hennepin",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.hennepin.us/residents/property/tax-forfeited-land",
     "known_auction_vendor": null,
     "timezone": "America/Chicago",
     "priority": "high"
@@ -3124,7 +3124,7 @@
     "state": "MN",
     "county_name": "Ramsey",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.ramseycountymn.gov/residents/property-home/taxes-values/productive-properties/tax-forfeited-public-sales",
     "known_auction_vendor": null,
     "timezone": "America/Chicago",
     "priority": "high"
@@ -3154,7 +3154,7 @@
     "state": "NC",
     "county_name": "Mecklenburg",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://tax.mecknc.gov/services/tax-foreclosure-properties",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "high"
@@ -3164,7 +3164,7 @@
     "state": "NC",
     "county_name": "Wake",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.wake.gov/departments-government/tax-administration/payment-information/delinquent-taxes",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "high"
@@ -3174,7 +3174,7 @@
     "state": "NJ",
     "county_name": "Atlantic",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.atlantic-county.org/taxation/",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "medium"
@@ -3184,7 +3184,7 @@
     "state": "NJ",
     "county_name": "Bergen",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "http://www.bergentcta.org/taxsale/",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "high"
@@ -3194,7 +3194,7 @@
     "state": "NJ",
     "county_name": "Burlington",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.co.burlington.nj.us/127/Board-of-Taxation",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "medium"
@@ -3204,7 +3204,7 @@
     "state": "NJ",
     "county_name": "Camden",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.camdencounty.com/service/taxes/board-of-taxation/",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "medium"
@@ -3234,7 +3234,7 @@
     "state": "NJ",
     "county_name": "Essex",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.essexcountynjtaxboard.org/",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "high"
@@ -3254,7 +3254,7 @@
     "state": "NJ",
     "county_name": "Hudson",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.hudsoncountynj.org/departments/taxation",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "high"
@@ -3284,7 +3284,7 @@
     "state": "NJ",
     "county_name": "Middlesex",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.middlesexcountynj.gov/government/departments/department-of-finance/board-of-taxation",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "high"
@@ -3294,7 +3294,7 @@
     "state": "NJ",
     "county_name": "Monmouth",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.visitmonmouth.com/page.aspx?Id=2516",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "medium"
@@ -3304,7 +3304,7 @@
     "state": "NJ",
     "county_name": "Morris",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.morriscountynj.gov/Departments/Board-of-Taxation",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "medium"
@@ -3314,7 +3314,7 @@
     "state": "NJ",
     "county_name": "Ocean",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://tax.co.ocean.nj.us/",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "medium"
@@ -3504,7 +3504,7 @@
     "state": "PA",
     "county_name": "Allegheny",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://alleghenycountytreasurer.us/real-estate-tax/",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "high"
@@ -3514,7 +3514,7 @@
     "state": "PA",
     "county_name": "Philadelphia",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.phila.gov/services/property-lots-housing/foreclosure-sheriff-sales/sheriff-lien-sales/",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "high"
@@ -3524,7 +3524,7 @@
     "state": "SC",
     "county_name": "Charleston",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.charlestoncounty.org/departments/delinquent-tax/tax-sale.php",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "high"
@@ -3534,7 +3534,7 @@
     "state": "SC",
     "county_name": "Greenville",
     "treasurer_url": null,
-    "tax_sale_page_url": null,
+    "tax_sale_page_url": "https://www.greenvillecounty.org/TaxCollector/TaxSaleFAQ.aspx",
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "high"
