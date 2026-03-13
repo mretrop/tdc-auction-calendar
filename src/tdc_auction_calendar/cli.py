@@ -45,8 +45,13 @@ def main(
 
 def _ensure_tables() -> None:
     """Create tables if DB is empty (first run)."""
-    engine = get_engine()
-    Base.metadata.create_all(engine)
+    try:
+        engine = get_engine()
+        Base.metadata.create_all(engine)
+    except Exception as exc:
+        console.print(f"[red]Failed to initialize database:[/red] {exc}")
+        console.print("Check your --db-path or DATABASE_URL setting.")
+        raise typer.Exit(1)
 
 
 # --- Export stubs ---
@@ -108,6 +113,9 @@ def collect(
         console.print(f"[red]Error:[/red] {exc}")
         console.print(f"Valid collectors: {', '.join(sorted(COLLECTORS.keys()))}")
         raise typer.Exit(1)
+    except Exception as exc:
+        console.print(f"[red]Collection failed:[/red] {exc}")
+        raise typer.Exit(1)
     finally:
         session.close()
 
@@ -140,7 +148,7 @@ def _check_db_exists() -> bool:
     from tdc_auction_calendar.db.database import get_database_url
     url = get_database_url()
     if url.startswith("sqlite:///"):
-        db_path = url.replace("sqlite:///", "")
+        db_path = url.removeprefix("sqlite:///")
         if ":memory:" in db_path:
             return True
         return os.path.exists(db_path)
@@ -165,10 +173,14 @@ def list_auctions(
     # Parse date strings
     from_date_parsed: datetime.date | None = None
     to_date_parsed: datetime.date | None = None
-    if from_date:
-        from_date_parsed = datetime.date.fromisoformat(from_date)
-    if to_date:
-        to_date_parsed = datetime.date.fromisoformat(to_date)
+    try:
+        if from_date:
+            from_date_parsed = datetime.date.fromisoformat(from_date)
+        if to_date:
+            to_date_parsed = datetime.date.fromisoformat(to_date)
+    except ValueError:
+        console.print(f"[red]Invalid date format.[/red] Use YYYY-MM-DD (e.g., {datetime.date.today().isoformat()}).")
+        raise typer.Exit(1)
 
     session = get_session()
     try:
@@ -186,6 +198,9 @@ def list_auctions(
             query = query.filter(AuctionRow.start_date <= to_date_parsed)
 
         rows = query.order_by(AuctionRow.start_date).limit(limit).all()
+    except Exception as exc:
+        console.print(f"[red]Database query failed:[/red] {exc}")
+        raise typer.Exit(1)
     finally:
         session.close()
 
@@ -255,6 +270,9 @@ def status() -> None:
 
         # Collector health
         health = get_collector_health(session)
+    except Exception as exc:
+        console.print(f"[red]Database query failed:[/red] {exc}")
+        raise typer.Exit(1)
     finally:
         session.close()
 
@@ -292,6 +310,9 @@ def states() -> None:
     session = get_session()
     try:
         rows = session.query(StateRulesRow).order_by(StateRulesRow.state).all()
+    except Exception as exc:
+        console.print(f"[red]Database query failed:[/red] {exc}")
+        raise typer.Exit(1)
     finally:
         session.close()
 
@@ -332,6 +353,9 @@ def counties(
         if state:
             query = query.filter(CountyInfoRow.state == state.upper())
         rows = query.order_by(CountyInfoRow.state, CountyInfoRow.county_name).all()
+    except Exception as exc:
+        console.print(f"[red]Database query failed:[/red] {exc}")
+        raise typer.Exit(1)
     finally:
         session.close()
 

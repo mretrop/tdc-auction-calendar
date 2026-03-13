@@ -1,9 +1,18 @@
 """Tests for the CLI interface."""
 
+import datetime
+from unittest.mock import AsyncMock, patch
+
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session as SASession
 from typer.testing import CliRunner
 
 from tdc_auction_calendar.cli import app
+from tdc_auction_calendar.models import Base
+from tdc_auction_calendar.models.auction import AuctionRow
+from tdc_auction_calendar.models.health import CollectorError, CollectorHealthRow, RunReport
+from tdc_auction_calendar.models.jurisdiction import CountyInfoRow, StateRulesRow
 
 runner = CliRunner()
 
@@ -21,7 +30,7 @@ class TestHelp:
 
 
 class TestDbPath:
-    def test_db_path_sets_env_var(self, monkeypatch):
+    def test_db_path_option_is_accepted(self, monkeypatch):
         monkeypatch.delenv("DATABASE_URL", raising=False)
         # Invoke a lightweight command with --db-path
         result = runner.invoke(app, ["--db-path", "sqlite:///test.db", "states"])
@@ -56,11 +65,6 @@ class TestSyncStub:
         result = runner.invoke(app, ["sync", "supabase"])
         assert result.exit_code == 1
         assert "Not yet implemented" in result.output
-
-
-from unittest.mock import AsyncMock, patch
-
-from tdc_auction_calendar.models.health import CollectorError, RunReport
 
 
 def _make_report(**overrides) -> RunReport:
@@ -136,19 +140,24 @@ class TestCollect:
         result = runner.invoke(app, ["collect"])
         assert result.exit_code == 0
 
-
-import datetime
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session as SASession
-
-from tdc_auction_calendar.models import Base
-from tdc_auction_calendar.models.auction import AuctionRow
+    @patch("tdc_auction_calendar.cli.run_and_persist", new_callable=AsyncMock)
+    @patch("tdc_auction_calendar.cli.get_session")
+    @patch("tdc_auction_calendar.cli._ensure_tables")
+    def test_collect_unexpected_exception_exits_1(self, mock_tables, mock_session, mock_run):
+        mock_run.side_effect = RuntimeError("connection refused")
+        result = runner.invoke(app, ["collect", "--collectors", "statutory"])
+        assert result.exit_code == 1
+        assert "Collection failed" in result.output
 
 
 def _future_date(days=365):
     """Return a future date that won't expire in tests."""
     return datetime.date.today() + datetime.timedelta(days=days)
+
+
+def _past_date(days=30):
+    """Return a past date for testing --from-date override."""
+    return datetime.date.today() - datetime.timedelta(days=days)
 
 
 @pytest.fixture()
@@ -235,8 +244,69 @@ class TestList:
         assert "Miami-Dade" in result.output
         assert "Broward" not in result.output
 
+    def test_list_from_date_overrides_today_default(self, cli_db):
+        past = _past_date(days=10)
+        with SASession(cli_db) as session:
+            session.add(AuctionRow(
+                state="FL", county="Miami-Dade",
+                start_date=past,
+                sale_type="deed", status="completed",
+                source_type="statutory", confidence_score=0.5,
+            ))
+            session.commit()
 
-from tdc_auction_calendar.models.health import CollectorHealthRow
+        # Without --from-date, the past auction is excluded (default: today)
+        result = runner.invoke(app, ["list"])
+        assert "No auctions found" in result.output
+
+        # With --from-date before the auction, it appears
+        result = runner.invoke(app, ["list", "--from-date", str(past - datetime.timedelta(days=1))])
+        assert "Miami-Dade" in result.output
+
+    def test_list_to_date_limits_range(self, cli_db):
+        near = _future_date(days=30)
+        far = _future_date(days=400)
+        with SASession(cli_db) as session:
+            session.add(AuctionRow(
+                state="FL", county="Miami-Dade",
+                start_date=near,
+                sale_type="deed", status="upcoming",
+                source_type="statutory", confidence_score=0.5,
+            ))
+            session.add(AuctionRow(
+                state="TX", county="Harris",
+                start_date=far,
+                sale_type="deed", status="upcoming",
+                source_type="statutory", confidence_score=0.5,
+            ))
+            session.commit()
+
+        cutoff = near + datetime.timedelta(days=5)
+        result = runner.invoke(app, ["list", "--to-date", str(cutoff)])
+        assert "Miami-Dade" in result.output
+        assert "Harris" not in result.output
+
+    def test_list_respects_limit(self, cli_db):
+        with SASession(cli_db) as session:
+            for i in range(3):
+                session.add(AuctionRow(
+                    state="FL", county=f"County-{i}",
+                    start_date=_future_date(days=30 + i),
+                    sale_type="deed", status="upcoming",
+                    source_type="statutory", confidence_score=0.5,
+                ))
+            session.commit()
+
+        result = runner.invoke(app, ["list", "--limit", "2"])
+        assert result.exit_code == 0
+        assert "County-0" in result.output
+        assert "County-1" in result.output
+        assert "County-2" not in result.output
+
+    def test_list_invalid_date_format_exits_1(self, cli_db):
+        result = runner.invoke(app, ["list", "--from-date", "not-a-date"])
+        assert result.exit_code == 1
+        assert "Invalid date format" in result.output
 
 
 class TestStatus:
@@ -276,8 +346,11 @@ class TestStatus:
         assert "statutory" in result.output
         assert "100" in result.output
 
-
-from tdc_auction_calendar.models.jurisdiction import StateRulesRow
+    def test_status_empty_db(self, cli_db):
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 0
+        assert "Total auctions: 0" in result.output
+        assert "No collector health data" in result.output
 
 
 class TestStates:
@@ -305,8 +378,18 @@ class TestStates:
         result = runner.invoke(app, ["states"])
         assert "No states found" in result.output
 
+    def test_states_shows_redemption_period(self, cli_db):
+        with SASession(cli_db) as session:
+            session.add(StateRulesRow(
+                state="TX", sale_type="deed",
+                typical_months=[1, 2],
+                redemption_period_months=6,
+            ))
+            session.commit()
 
-from tdc_auction_calendar.models.jurisdiction import CountyInfoRow
+        result = runner.invoke(app, ["states"])
+        assert "TX" in result.output
+        assert "6" in result.output
 
 
 class TestCounties:
@@ -349,3 +432,17 @@ class TestCounties:
     def test_counties_empty_prints_message(self, cli_db):
         result = runner.invoke(app, ["counties"])
         assert "No counties found" in result.output
+
+    def test_counties_null_vendor_shows_dash(self, cli_db):
+        with SASession(cli_db) as session:
+            session.add(CountyInfoRow(
+                fips_code="12086", state="FL", county_name="Miami-Dade",
+                timezone="America/New_York", priority="high",
+                known_auction_vendor=None,
+                tax_sale_page_url=None,
+            ))
+            session.commit()
+
+        result = runner.invoke(app, ["counties"])
+        assert result.exit_code == 0
+        assert "Miami-Dade" in result.output
