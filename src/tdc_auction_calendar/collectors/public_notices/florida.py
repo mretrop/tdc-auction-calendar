@@ -17,7 +17,6 @@ class FloridaCollector(BaseNoticeCollector):
     default_sale_type = SaleType.LIEN
     base_url = _BASE_URL
     search_keywords = ["tax lien sale", "tax deed sale", "delinquent tax"]
-    use_json_options = True
 
     @property
     def name(self) -> str:

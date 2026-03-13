@@ -72,11 +72,14 @@ class BaseNoticeCollector(BaseCollector):
 
     def normalize(self, raw: dict) -> Auction:
         """Convert a raw notice record dict into a validated Auction."""
+        county = raw["county"].strip()
+        if not county:
+            raise ValueError(f"Empty county name in record: {raw}")
         return Auction(
             state=self.state_code,
-            county=raw["county"],
+            county=county,
             start_date=date.fromisoformat(raw["sale_date"]),
-            sale_type=SaleType(raw.get("sale_type", self.default_sale_type)),
+            sale_type=SaleType(raw.get("sale_type") or self.default_sale_type),
             source_type=SourceType.PUBLIC_NOTICE,
             source_url=self.base_url,
             confidence_score=self.confidence_score,
@@ -86,6 +89,7 @@ class BaseNoticeCollector(BaseCollector):
         client = create_scrape_client()
         try:
             all_auctions: list[Auction] = []
+            keywords_failed = 0
             for keyword in self.search_keywords:
                 url = self._build_search_url(keyword)
                 js_code = self._get_js_code(keyword)
@@ -104,13 +108,42 @@ class BaseNoticeCollector(BaseCollector):
                     if wait_for is not None:
                         scrape_kwargs["wait_for"] = wait_for
 
-                result = await client.scrape(url, **scrape_kwargs)
+                try:
+                    result = await client.scrape(url, **scrape_kwargs)
+                except Exception:
+                    logger.error(
+                        "scrape_failed",
+                        collector=self.name,
+                        keyword=keyword,
+                        url=url,
+                    )
+                    raise
 
-                raw_records: list = (
-                    result.data
-                    if isinstance(result.data, list)
-                    else ([result.data] if result.data is not None else [])
-                )
+                if isinstance(result.data, list):
+                    raw_records = result.data
+                elif result.data is None:
+                    raw_records = []
+                elif isinstance(result.data, dict):
+                    logger.warning(
+                        "single_record_result",
+                        collector=self.name,
+                        keyword=keyword,
+                        msg="Expected list of records, got single dict; wrapping",
+                    )
+                    raw_records = [result.data]
+                else:
+                    raise ExtractionError(
+                        f"{self.name}: unexpected result.data type: "
+                        f"{type(result.data).__name__}"
+                    )
+
+                if not raw_records:
+                    logger.info(
+                        "keyword_no_results",
+                        collector=self.name,
+                        keyword=keyword,
+                        url=url,
+                    )
 
                 failure_count = 0
                 today = date.today()
@@ -120,7 +153,7 @@ class BaseNoticeCollector(BaseCollector):
                         if auction.start_date < today:
                             continue
                         all_auctions.append(auction)
-                    except (KeyError, TypeError, ValueError, ValidationError) as exc:
+                    except (KeyError, ValueError, ValidationError) as exc:
                         failure_count += 1
                         logger.error(
                             "normalize_failed",
@@ -141,9 +174,18 @@ class BaseNoticeCollector(BaseCollector):
                     )
 
                 if raw_records and failure_count == len(raw_records):
-                    raise ExtractionError(
-                        f"{self.name}: all {len(raw_records)} records failed normalization"
+                    keywords_failed += 1
+                    logger.error(
+                        "keyword_all_records_failed",
+                        collector=self.name,
+                        keyword=keyword,
+                        total=len(raw_records),
                     )
+
+            if keywords_failed == len(self.search_keywords) and keywords_failed > 0:
+                raise ExtractionError(
+                    f"{self.name}: all keywords failed normalization"
+                )
 
             return all_auctions
         finally:

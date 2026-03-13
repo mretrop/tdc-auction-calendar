@@ -20,6 +20,3 @@ class MinnesotaCollector(ColumnPlatformMixin, BaseNoticeCollector):
     @property
     def name(self) -> str:
         return "minnesota_public_notice"
-
-    def _build_search_url(self, keyword: str) -> str:
-        return f"{_BASE_URL}/Search.aspx"

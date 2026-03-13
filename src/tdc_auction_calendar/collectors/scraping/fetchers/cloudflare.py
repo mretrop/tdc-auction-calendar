@@ -70,11 +70,10 @@ class CloudflareFetcher:
         wait_for: str | None = None,
     ) -> FetchResult:
         """Submit a crawl job and poll until complete."""
-        if js_code is not None:
-            logger.warning(
-                "cloudflare_js_code_ignored",
-                url=url,
-                msg="Cloudflare fetcher does not support js_code; falling back may use it",
+        if js_code is not None or wait_for is not None:
+            raise RuntimeError(
+                f"Cloudflare fetcher does not support js_code/wait_for for {url}; "
+                "requires Crawl4AI fallback"
             )
         logger.info("cloudflare_fetch_start", url=url, render_js=render_js)
 

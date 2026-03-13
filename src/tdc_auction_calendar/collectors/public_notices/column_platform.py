@@ -12,9 +12,9 @@ from __future__ import annotations
 class ColumnPlatformMixin:
     """Provides JS-based form interaction for Column-platform ASP.NET sites.
 
-    Overrides _get_js_code(keyword) and _get_wait_for() from BaseNoticeCollector.
-    Sets use_json_options = False to use LLM schema extraction (since Cloudflare
-    can't execute js_code).
+    Overrides _get_js_code(keyword), _get_wait_for(), and _build_search_url()
+    from BaseNoticeCollector. Sets use_json_options = False to use LLM schema
+    extraction (since Cloudflare can't execute js_code).
     """
 
     use_json_options: bool = False
@@ -23,17 +23,17 @@ class ColumnPlatformMixin:
     _SEARCH_POSTBACK = "ctl00$ContentPlaceHolder1$as1$btnSearch"
     _RESULTS_SELECTOR = "#searchResults"
 
-    def _build_search_js(self, keyword: str) -> str:
-        """Generate JS to fill keyword field and submit ASP.NET PostBack form."""
+    def _get_js_code(self, keyword: str) -> str:
+        """Return JS to fill keyword field and submit ASP.NET PostBack form."""
         escaped = keyword.replace("'", "\\'")
         return (
             f"document.getElementById('{self._KEYWORD_FIELD}').value = '{escaped}';"
             f"__doPostBack('{self._SEARCH_POSTBACK}', '');"
         )
 
-    def _get_js_code(self, keyword: str) -> str:
-        """Return JS to submit keyword search on the Column platform."""
-        return self._build_search_js(keyword)
-
     def _get_wait_for(self) -> str:
         return self._RESULTS_SELECTOR
+
+    def _build_search_url(self, keyword: str) -> str:
+        """All Column-platform sites use /Search.aspx (keyword is submitted via JS)."""
+        return f"{self.base_url}/Search.aspx"
