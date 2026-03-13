@@ -244,8 +244,11 @@ class ScrapeClient:
         """Run extraction on fetched content."""
         if extraction is None and schema is not None:
             if not os.environ.get("ANTHROPIC_API_KEY"):
-                logger.warning("llm_extraction_skipped", reason="ANTHROPIC_API_KEY not set")
-                return None
+                raise ExtractionError(
+                    f"ANTHROPIC_API_KEY not set; cannot perform LLM extraction "
+                    f"for {schema.__name__}. Set the environment variable or "
+                    f"pass an explicit extraction strategy."
+                )
             budget = BudgetLogger()
             extraction = LLMExtraction(on_usage=budget.log)
 

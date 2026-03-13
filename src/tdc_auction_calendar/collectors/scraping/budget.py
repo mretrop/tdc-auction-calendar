@@ -26,7 +26,7 @@ class BudgetLogger:
         self._path = path
 
     def log(self, model: str, schema_name: str, usage: Any) -> None:
-        """Append a cost record. Never raises."""
+        """Append a cost record. Suppresses file I/O errors."""
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
 

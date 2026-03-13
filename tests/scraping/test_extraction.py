@@ -208,3 +208,27 @@ async def test_llm_extraction_api_error():
 
     with pytest.raises(RuntimeError, match="Claude API error"):
         await extractor.extract("content", schema=AuctionInfo)
+
+
+async def test_llm_extraction_api_error_does_not_fire_on_usage():
+    """on_usage is NOT called when APIError occurs (no usage data available)."""
+    import anthropic
+
+    usage_calls = []
+
+    mock_client = AsyncMock()
+    mock_client.messages.create.side_effect = anthropic.APIError(
+        message="rate limited",
+        request=MagicMock(),
+        body=None,
+    )
+
+    extractor = LLMExtraction(
+        client=mock_client,
+        on_usage=lambda m, s, u: usage_calls.append((m, s, u)),
+    )
+
+    with pytest.raises(RuntimeError):
+        await extractor.extract("content", schema=AuctionInfo)
+
+    assert len(usage_calls) == 0

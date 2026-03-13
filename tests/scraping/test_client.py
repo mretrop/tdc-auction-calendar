@@ -321,17 +321,17 @@ def test_create_scrape_client_invalid_env_var(tmp_path, monkeypatch):
 # --- API key gating and BudgetLogger wiring tests (issue #14) ---
 
 
-async def test_client_skips_llm_without_api_key(ok_fetcher, rate_limiter, cache, monkeypatch):
-    """Without ANTHROPIC_API_KEY, schema-based extraction returns None."""
+async def test_client_raises_without_api_key(ok_fetcher, rate_limiter, cache, monkeypatch):
+    """Without ANTHROPIC_API_KEY, schema-based extraction raises ExtractionError."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
     class MySchema(BaseModel):
         county: str
 
     client = _make_client(ok_fetcher, rate_limiter=rate_limiter, cache=cache)
-    result = await client.scrape("https://example.com", schema=MySchema)
 
-    assert result.data is None
+    with pytest.raises(ExtractionError, match="ANTHROPIC_API_KEY not set"):
+        await client.scrape("https://example.com", schema=MySchema)
 
 
 async def test_client_llm_extraction_with_api_key(ok_fetcher, rate_limiter, cache, monkeypatch):
