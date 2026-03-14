@@ -186,11 +186,50 @@ class TestExportIcal:
         assert b"Harris" not in result.output_bytes
 
 
-class TestSyncStub:
-    def test_sync_supabase_stub(self):
+class TestSyncSupabase:
+    def test_sync_supabase_missing_env_vars(self, cli_db, monkeypatch):
+        monkeypatch.delenv("SUPABASE_URL", raising=False)
+        monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
         result = runner.invoke(app, ["sync", "supabase"])
         assert result.exit_code == 1
-        assert "Not yet implemented" in result.output
+        assert "SUPABASE_URL" in result.output
+
+    @patch("tdc_auction_calendar.cli.sync_to_supabase")
+    def test_sync_supabase_success(self, mock_sync, cli_db, monkeypatch):
+        from tdc_auction_calendar.sync.supabase_sync import SyncResult
+        monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+        monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "key123")
+        mock_sync.return_value = SyncResult(synced=5, failed=0)
+
+        result = runner.invoke(app, ["sync", "supabase"])
+        assert result.exit_code == 0
+        assert "5" in result.output
+
+    @patch("tdc_auction_calendar.cli.sync_to_supabase")
+    def test_sync_supabase_with_filters(self, mock_sync, cli_db, monkeypatch):
+        from tdc_auction_calendar.sync.supabase_sync import SyncResult
+        monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+        monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "key123")
+        mock_sync.return_value = SyncResult(synced=2, failed=0)
+
+        result = runner.invoke(app, ["sync", "supabase", "--state", "FL", "--upcoming-only"])
+        assert result.exit_code == 0
+        mock_sync.assert_called_once()
+        call_kwargs = mock_sync.call_args[1]
+        assert call_kwargs["states"] == ["FL"]
+        assert call_kwargs["upcoming_only"] is True
+
+    @patch("tdc_auction_calendar.cli.sync_to_supabase")
+    def test_sync_supabase_with_failures(self, mock_sync, cli_db, monkeypatch):
+        from tdc_auction_calendar.sync.supabase_sync import SyncResult
+        monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+        monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "key123")
+        mock_sync.return_value = SyncResult(synced=80, failed=20)
+
+        result = runner.invoke(app, ["sync", "supabase"])
+        assert result.exit_code == 1
+        assert "80" in result.output
+        assert "20" in result.output
 
 
 def _make_report(**overrides) -> RunReport:
