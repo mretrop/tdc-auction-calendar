@@ -5,20 +5,27 @@
 
 ## Overview
 
-A single GitHub Actions workflow file that automates auction data collection and Supabase sync on scheduled intervals. Four jobs run at different frequencies matching each collector tier's data volatility. The SQLite database is ephemeral per run — Supabase is the source of truth.
+Four separate GitHub Actions workflow files that automate auction data collection and Supabase sync on scheduled intervals. Each workflow handles one collector tier at its own frequency, matching data volatility. The SQLite database is ephemeral per run — Supabase is the source of truth.
 
-## File
+**Why four files instead of one?** GitHub Actions triggers _all_ jobs in a workflow for each `schedule` entry. With four cron entries in one workflow, the most frequent cron (every 12h for public notices) would trigger all four jobs every 12 hours. Separate files are simpler — each workflow runs exactly when its cron fires.
 
-`.github/workflows/collect.yml`
+## Files
 
-## Jobs & Schedules
+| File | Purpose |
+|------|---------|
+| `.github/workflows/collect-statutory.yml` | Weekly statutory collection |
+| `.github/workflows/collect-state-agencies.yml` | Daily state agency collection |
+| `.github/workflows/collect-public-notices.yml` | Twice-daily public notice collection |
+| `.github/workflows/collect-county-websites.yml` | Daily county website collection |
 
-| Job | Cron (UTC) | Collectors | Concurrency Group |
-|-----|-----------|------------|-------------------|
-| `statutory` | `0 3 * * 0` (Sunday 3am) | `statutory` | `collect-statutory` |
-| `state-agencies` | `0 4 * * *` (daily 4am) | `arkansas_state_agency`, `california_state_agency`, `colorado_state_agency`, `iowa_state_agency` | `collect-state-agencies` |
-| `public-notices` | `0 6,18 * * *` (6am, 6pm) | `florida_public_notice`, `minnesota_public_notice`, `new_jersey_public_notice`, `north_carolina_public_notice`, `pennsylvania_public_notice`, `south_carolina_public_notice`, `utah_public_notice` | `collect-public-notices` |
-| `county-websites` | `0 5 * * *` (daily 5am) | `county_website` | `collect-county-websites` |
+## Workflows & Schedules
+
+| Workflow | Cron (UTC) | Collectors | Concurrency Group |
+|----------|-----------|------------|-------------------|
+| `collect-statutory` | `0 3 * * 0` (Sunday 3am) | `statutory` | `collect-statutory` |
+| `collect-state-agencies` | `0 4 * * *` (daily 4am) | `arkansas_state_agency`, `california_state_agency`, `colorado_state_agency`, `iowa_state_agency` | `collect-state-agencies` |
+| `collect-public-notices` | `0 6,18 * * *` (6am, 6pm) | `florida_public_notice`, `minnesota_public_notice`, `new_jersey_public_notice`, `north_carolina_public_notice`, `pennsylvania_public_notice`, `south_carolina_public_notice`, `utah_public_notice` | `collect-public-notices` |
+| `collect-county-websites` | `0 5 * * *` (daily 5am) | `county_website` | `collect-county-websites` |
 
 ## Runner & Python
 
@@ -26,7 +33,7 @@ A single GitHub Actions workflow file that automates auction data collection and
 - Python 3.13 (from `pyproject.toml`), installed via `setup-uv` with `python-version-file`
 - `permissions: contents: read`
 
-## Workflow Steps (per job)
+## Workflow Steps (per workflow)
 
 1. `actions/checkout@v4`
 2. `astral-sh/setup-uv@v4` — install uv + Python 3.13
@@ -38,13 +45,7 @@ A single GitHub Actions workflow file that automates auction data collection and
 
 ## Manual Trigger
 
-`workflow_dispatch` with a `tier` input (dropdown: `all`, `statutory`, `state-agencies`, `public-notices`, `county-websites`). Each job has an `if` condition:
-
-```
-if: github.event_name == 'schedule' || github.event.inputs.tier == 'all' || github.event.inputs.tier == '<this-tier>'
-```
-
-This allows running a specific tier on demand or all tiers at once.
+Each workflow supports `workflow_dispatch` for manual triggering. Since each tier is a separate workflow file, no input dropdown or `if:` conditions are needed — just dispatch the specific workflow you want to run.
 
 ## Secrets
 
