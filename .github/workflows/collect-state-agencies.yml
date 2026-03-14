@@ -1,0 +1,46 @@
+name: "Collect: State Agencies (daily)"
+
+on:
+  schedule:
+    - cron: "0 4 * * *"  # Daily 4am UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collect-state-agencies
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --no-dev
+
+      - name: Collect state agency auction data
+        run: >-
+          uv run tdc-auction-calendar collect
+          --collectors arkansas_state_agency
+          --collectors california_state_agency
+          --collectors colorado_state_agency
+          --collectors iowa_state_agency
+
+      - name: Sync to Supabase
+        run: uv run tdc-auction-calendar sync supabase
