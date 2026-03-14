@@ -1,0 +1,61 @@
+name: "Collect: Public Notices (twice daily)"
+
+on:
+  schedule:
+    - cron: "0 6,18 * * *"  # 6am and 6pm UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collect-public-notices
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    steps:
+      - name: Validate required secrets
+        run: |
+          missing=()
+          [ -z "$SUPABASE_URL" ] && missing+=("SUPABASE_URL")
+          [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && missing+=("SUPABASE_SERVICE_ROLE_KEY")
+          [ -z "$CLOUDFLARE_ACCOUNT_ID" ] && missing+=("CLOUDFLARE_ACCOUNT_ID")
+          [ -z "$CLOUDFLARE_API_TOKEN" ] && missing+=("CLOUDFLARE_API_TOKEN")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --no-dev
+
+      - name: Collect public notice auction data
+        run: >-
+          uv run tdc-auction-calendar collect
+          --collectors florida_public_notice
+          --collectors minnesota_public_notice
+          --collectors new_jersey_public_notice
+          --collectors north_carolina_public_notice
+          --collectors pennsylvania_public_notice
+          --collectors south_carolina_public_notice
+          --collectors utah_public_notice
+
+      - name: Sync to Supabase
+        run: uv run tdc-auction-calendar sync supabase
