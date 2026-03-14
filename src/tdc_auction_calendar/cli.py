@@ -196,11 +196,13 @@ def export_rss(
     from tdc_auction_calendar.exporters.rss import auctions_to_rss
 
     if days is not None:
+        if days <= 0:
+            console.print("[red]--days must be a positive integer.[/red]")
+            raise typer.Exit(1)
         from_date = (datetime.date.today() - datetime.timedelta(days=days)).isoformat()
 
     from_parsed, to_parsed = _parse_dates(from_date, to_date)
 
-    # Build feed title based on state filter
     if state and len(state) == 1:
         title = f"Tax Auction Calendar — {state[0].upper()}"
     else:

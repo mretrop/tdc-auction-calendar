@@ -16,7 +16,9 @@ def _build_description(auction: Auction) -> str:
     if auction.registration_deadline is not None:
         parts.append(f"<b>Registration deadline:</b> {auction.registration_deadline}")
     if auction.deposit_amount is not None:
-        parts.append(f"<b>Deposit:</b> ${auction.deposit_amount:.2f}")
+        parts.append(f"<b>Deposit:</b> ${auction.deposit_amount:,.2f}")
+    if auction.deposit_deadline is not None:
+        parts.append(f"<b>Deposit deadline:</b> {auction.deposit_deadline}")
     if auction.vendor is not None:
         parts.append(f"<b>Vendor:</b> {html.escape(auction.vendor)}")
     if auction.property_count is not None:

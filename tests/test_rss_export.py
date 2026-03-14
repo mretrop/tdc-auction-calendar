@@ -88,7 +88,7 @@ class TestAuctionsToRss:
         root = ET.fromstring(result)
         desc = root.find("channel/item/description").text
         assert "2027-04-01" in desc
-        assert "5000.00" in desc
+        assert "5,000.00" in desc
         assert "RealAuction" in desc
         assert "https://example.com/auction" in desc
 
