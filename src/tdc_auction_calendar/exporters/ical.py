@@ -7,7 +7,6 @@ import datetime
 import structlog
 from icalendar import Alarm, Calendar, Event
 
-from tdc_auction_calendar.exporters.filters import query_auctions  # noqa: F401
 from tdc_auction_calendar.models.auction import Auction
 
 logger = structlog.get_logger()

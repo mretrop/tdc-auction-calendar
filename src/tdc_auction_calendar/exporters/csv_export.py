@@ -26,10 +26,8 @@ CSV_COLUMNS = (
 def auctions_to_csv(auctions: list[Auction]) -> str:
     """Convert a list of Auction models to a CSV string."""
     buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=CSV_COLUMNS, extrasaction="ignore")
+    writer = csv.DictWriter(buf, fieldnames=CSV_COLUMNS, restval="", extrasaction="ignore")
     writer.writeheader()
     for auction in auctions:
-        row = auction.model_dump(mode="json")
-        filtered = {col: row.get(col) if row.get(col) is not None else "" for col in CSV_COLUMNS}
-        writer.writerow(filtered)
+        writer.writerow(auction.model_dump(mode="json"))
     return buf.getvalue()
