@@ -49,10 +49,10 @@ class TestExportStubs:
         assert result.exit_code == 1
         assert "Database not found" in result.output
 
-    def test_export_rss_stub(self):
+    def test_export_rss_no_db(self):
         result = runner.invoke(app, ["export", "rss"])
         assert result.exit_code == 1
-        assert "Not yet implemented" in result.output
+        assert "Database not found" in result.output
 
 
 class TestExportIcal:

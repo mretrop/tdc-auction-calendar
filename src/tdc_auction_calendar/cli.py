@@ -183,10 +183,34 @@ def export_json(
 
 
 @export_app.command("rss")
-def export_rss() -> None:
+def export_rss(
+    state: list[str] | None = typer.Option(None, "--state", help="Filter by state code (repeatable)"),
+    sale_type: SaleType | None = typer.Option(None, "--sale-type", help="Filter by sale type"),
+    from_date: str | None = typer.Option(None, "--from-date", help="Start date (YYYY-MM-DD)"),
+    to_date: str | None = typer.Option(None, "--to-date", help="End date (YYYY-MM-DD)"),
+    days: int | None = typer.Option(None, "--days", help="Shortcut: auctions from last N days (overrides --from-date)"),
+    upcoming_only: bool = typer.Option(False, "--upcoming-only", help="Only include upcoming auctions"),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
+) -> None:
     """Export auctions to RSS feed."""
-    console.print("Not yet implemented. See issue #20.")
-    raise typer.Exit(1)
+    from tdc_auction_calendar.exporters.rss import auctions_to_rss
+
+    if days is not None:
+        if days <= 0:
+            console.print("[red]--days must be a positive integer.[/red]")
+            raise typer.Exit(1)
+        from_date = (datetime.date.today() - datetime.timedelta(days=days)).isoformat()
+
+    from_parsed, to_parsed = _parse_dates(from_date, to_date)
+
+    if state and len(state) == 1:
+        title = f"Tax Auction Calendar — {state[0].upper()}"
+    else:
+        title = "Tax Auction Calendar"
+
+    auctions = _query_export_auctions(state, sale_type, from_parsed, to_parsed, upcoming_only)
+    _write_output(auctions_to_rss(auctions, title=title), output)
+    typer.echo(f"Exported {len(auctions)} auction(s).", err=True)
 
 
 # --- Sync stubs ---
