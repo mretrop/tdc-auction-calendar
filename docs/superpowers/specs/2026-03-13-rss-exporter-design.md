@@ -15,7 +15,7 @@ Add RSS 2.0 feed export for auction records, following the same patterns as CSV/
 def auctions_to_rss(auctions: list[Auction], title: str = "Tax Auction Calendar") -> str:
 ```
 
-Returns valid RSS 2.0 XML string. Uses `xml.etree.ElementTree` (stdlib — no new dependency).
+Returns valid RSS 2.0 XML string. Uses `xml.etree.ElementTree` for XML generation and `email.utils.format_datetime` for RFC 822 dates (both stdlib — no new dependency). HTML in `<description>` uses `html.escape()` for safety.
 
 ### Feed Structure
 
@@ -52,7 +52,7 @@ Replace the `export rss` stub in `cli.py`. Uses shared helpers (`_parse_dates`, 
 
 - Computes `from_date = today - N days`
 - If both `--days` and `--from-date` are provided, `--days` wins
-- Feed title: `"Tax Auction Calendar — {state}"` when filtered by single state, `"Tax Auction Calendar"` otherwise
+- Feed title: `"Tax Auction Calendar — {state}"` when filtered by exactly one state, generic title otherwise (multiple states or no filter)
 
 ## Acceptance Criteria
 
