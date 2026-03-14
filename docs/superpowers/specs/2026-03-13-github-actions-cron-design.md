@@ -1,0 +1,67 @@
+# GitHub Actions Cron Workflow — Design Spec
+
+**Issue:** #23
+**Date:** 2026-03-13
+
+## Overview
+
+A single GitHub Actions workflow file that automates auction data collection and Supabase sync on scheduled intervals. Four jobs run at different frequencies matching each collector tier's data volatility. The SQLite database is ephemeral per run — Supabase is the source of truth.
+
+## File
+
+`.github/workflows/collect.yml`
+
+## Jobs & Schedules
+
+| Job | Cron (UTC) | Collectors | Concurrency Group |
+|-----|-----------|------------|-------------------|
+| `statutory` | `0 3 * * 0` (Sunday 3am) | `statutory` | `collect-statutory` |
+| `state-agencies` | `0 4 * * *` (daily 4am) | `arkansas_state_agency`, `california_state_agency`, `colorado_state_agency`, `iowa_state_agency` | `collect-state-agencies` |
+| `public-notices` | `0 6,18 * * *` (6am, 6pm) | `florida_public_notice`, `minnesota_public_notice`, `new_jersey_public_notice`, `north_carolina_public_notice`, `pennsylvania_public_notice`, `south_carolina_public_notice`, `utah_public_notice` | `collect-public-notices` |
+| `county-websites` | `0 5 * * *` (daily 5am) | `county_website` | `collect-county-websites` |
+
+## Workflow Steps (per job)
+
+1. `actions/checkout@v4`
+2. `astral-sh/setup-uv@v4` — install uv
+3. `uv sync` — install dependencies
+4. `uv run tdc-auction-calendar collect --collectors <names>` — run tier-specific collectors
+5. `uv run tdc-auction-calendar sync supabase` — push collected data to Supabase
+
+## Manual Trigger
+
+`workflow_dispatch` with a `tier` input (dropdown: `all`, `statutory`, `state-agencies`, `public-notices`, `county-websites`). Each job has an `if` condition:
+
+```
+if: github.event_name == 'schedule' || github.event.inputs.tier == 'all' || github.event.inputs.tier == '<this-tier>'
+```
+
+This allows running a specific tier on demand or all tiers at once.
+
+## Secrets
+
+| Secret | Required | Purpose |
+|--------|----------|---------|
+| `SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase write access |
+| `CLOUDFLARE_ACCOUNT_ID` | Yes | Browser Rendering fetcher |
+| `CLOUDFLARE_API_TOKEN` | Yes | Browser Rendering fetcher |
+| `ANTHROPIC_API_KEY` | No | LLM fallback extraction |
+
+## Error Handling
+
+- **Concurrency**: `cancel-in-progress: false` — queues new runs instead of canceling active ones, avoiding mid-scrape kills.
+- **Partial failure**: `collect` exits 0 if at least one collector succeeds. `sync supabase` runs after, pushing whatever was collected. If all collectors fail, `collect` exits 1 and sync is skipped.
+- **Timeout**: `timeout-minutes: 30` per job to prevent hung scrapes from consuming Actions minutes.
+- **Notifications**: GitHub Actions default email notifications on failure.
+
+## Database
+
+Ephemeral per run. Each job starts with a fresh SQLite database (default path `data/auction_calendar.db`), collects into it, syncs to Supabase, and discards it. No DB commit to the repo.
+
+## Out of Scope
+
+- Crawl4AI / headless browser in CI (Cloudflare handles fetching)
+- Custom Slack/Discord notifications (GitHub default email is sufficient)
+- Scheduled sync without collection (sync always follows collect)
+- DB artifact upload or commit
