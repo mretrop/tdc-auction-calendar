@@ -39,15 +39,15 @@ class TestDbPath:
 
 
 class TestExportStubs:
-    def test_export_csv_stub(self):
+    def test_export_csv_no_db(self):
         result = runner.invoke(app, ["export", "csv"])
         assert result.exit_code == 1
-        assert "Not yet implemented" in result.output
+        assert "Database not found" in result.output
 
-    def test_export_json_stub(self):
+    def test_export_json_no_db(self):
         result = runner.invoke(app, ["export", "json"])
         assert result.exit_code == 1
-        assert "Not yet implemented" in result.output
+        assert "Database not found" in result.output
 
     def test_export_rss_stub(self):
         result = runner.invoke(app, ["export", "rss"])

@@ -117,17 +117,127 @@ def export_ical(
 
 
 @export_app.command("csv")
-def export_csv() -> None:
+def export_csv(
+    state: list[str] | None = typer.Option(None, "--state", help="Filter by state code (repeatable)"),
+    sale_type: SaleType | None = typer.Option(None, "--sale-type", help="Filter by sale type"),
+    from_date: str | None = typer.Option(None, "--from-date", help="Start date (YYYY-MM-DD)"),
+    to_date: str | None = typer.Option(None, "--to-date", help="End date (YYYY-MM-DD)"),
+    upcoming_only: bool = typer.Option(False, "--upcoming-only", help="Only include upcoming auctions"),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
+) -> None:
     """Export auctions to CSV format."""
-    console.print("Not yet implemented. See issue #19.")
-    raise typer.Exit(1)
+    import sys
+
+    from tdc_auction_calendar.exporters.csv_export import auctions_to_csv
+    from tdc_auction_calendar.exporters.filters import query_auctions
+
+    if not _check_db_exists():
+        console.print("[red]Database not found.[/red] Run `tdc-auction-calendar collect` first.")
+        raise typer.Exit(1)
+
+    from_date_parsed: datetime.date | None = None
+    to_date_parsed: datetime.date | None = None
+    try:
+        if from_date:
+            from_date_parsed = datetime.date.fromisoformat(from_date)
+        if to_date:
+            to_date_parsed = datetime.date.fromisoformat(to_date)
+    except ValueError:
+        console.print(f"[red]Invalid date format.[/red] Use YYYY-MM-DD (e.g., {datetime.date.today().isoformat()}).")
+        raise typer.Exit(1)
+
+    session = get_session()
+    try:
+        auctions = query_auctions(
+            session,
+            states=state,
+            sale_type=sale_type,
+            from_date=from_date_parsed,
+            to_date=to_date_parsed,
+            upcoming_only=upcoming_only,
+        )
+    except Exception as exc:
+        console.print(f"[red]Database query failed:[/red] {exc}")
+        raise typer.Exit(1)
+    finally:
+        session.close()
+
+    csv_str = auctions_to_csv(auctions)
+
+    try:
+        if output:
+            with open(output, "w", newline="") as f:
+                f.write(csv_str)
+        else:
+            sys.stdout.write(csv_str)
+    except (OSError, BrokenPipeError) as exc:
+        console.print(f"[red]Failed to write output:[/red] {exc}")
+        raise typer.Exit(1)
+
+    typer.echo(f"Exported {len(auctions)} auction(s).", err=True)
 
 
 @export_app.command("json")
-def export_json() -> None:
+def export_json(
+    state: list[str] | None = typer.Option(None, "--state", help="Filter by state code (repeatable)"),
+    sale_type: SaleType | None = typer.Option(None, "--sale-type", help="Filter by sale type"),
+    from_date: str | None = typer.Option(None, "--from-date", help="Start date (YYYY-MM-DD)"),
+    to_date: str | None = typer.Option(None, "--to-date", help="End date (YYYY-MM-DD)"),
+    upcoming_only: bool = typer.Option(False, "--upcoming-only", help="Only include upcoming auctions"),
+    compact: bool = typer.Option(False, "--compact", help="Single-line output (no indentation)"),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
+) -> None:
     """Export auctions to JSON format."""
-    console.print("Not yet implemented. See issue #19.")
-    raise typer.Exit(1)
+    import sys
+
+    from tdc_auction_calendar.exporters.json_export import auctions_to_json
+    from tdc_auction_calendar.exporters.filters import query_auctions
+
+    if not _check_db_exists():
+        console.print("[red]Database not found.[/red] Run `tdc-auction-calendar collect` first.")
+        raise typer.Exit(1)
+
+    from_date_parsed: datetime.date | None = None
+    to_date_parsed: datetime.date | None = None
+    try:
+        if from_date:
+            from_date_parsed = datetime.date.fromisoformat(from_date)
+        if to_date:
+            to_date_parsed = datetime.date.fromisoformat(to_date)
+    except ValueError:
+        console.print(f"[red]Invalid date format.[/red] Use YYYY-MM-DD (e.g., {datetime.date.today().isoformat()}).")
+        raise typer.Exit(1)
+
+    session = get_session()
+    try:
+        auctions = query_auctions(
+            session,
+            states=state,
+            sale_type=sale_type,
+            from_date=from_date_parsed,
+            to_date=to_date_parsed,
+            upcoming_only=upcoming_only,
+        )
+    except Exception as exc:
+        console.print(f"[red]Database query failed:[/red] {exc}")
+        raise typer.Exit(1)
+    finally:
+        session.close()
+
+    json_str = auctions_to_json(auctions, compact=compact)
+
+    try:
+        if output:
+            with open(output, "w") as f:
+                f.write(json_str)
+        else:
+            sys.stdout.write(json_str)
+            sys.stdout.write("\n")
+    except (OSError, BrokenPipeError) as exc:
+        console.print(f"[red]Failed to write output:[/red] {exc}")
+        raise typer.Exit(1)
+
+    typer.echo(f"Exported {len(auctions)} auction(s).", err=True)
 
 
 @export_app.command("rss")
