@@ -6,6 +6,7 @@ import datetime
 import logging
 import os
 
+import structlog
 import typer
 from rich.console import Console
 from sqlalchemy import func
@@ -17,8 +18,7 @@ from tdc_auction_calendar.log_config import configure_logging
 from tdc_auction_calendar.models.auction import AuctionRow
 from tdc_auction_calendar.models.enums import SaleType
 from tdc_auction_calendar.models.jurisdiction import Base, CountyInfoRow, StateRulesRow
-from tdc_auction_calendar.sync.supabase_sync import sync_to_supabase
-
+logger = structlog.get_logger()
 console = Console(width=200)
 
 app = typer.Typer(
@@ -214,7 +214,7 @@ def export_rss(
     typer.echo(f"Exported {len(auctions)} auction(s).", err=True)
 
 
-# --- Sync stubs ---
+# --- Sync commands ---
 
 
 @sync_app.command("supabase")
@@ -226,6 +226,8 @@ def sync_supabase(
     upcoming_only: bool = typer.Option(False, "--upcoming-only", help="Only include upcoming auctions"),
 ) -> None:
     """Upsert auction data to Supabase."""
+    from tdc_auction_calendar.sync.supabase_sync import sync_to_supabase
+
     supabase_url = os.environ.get("SUPABASE_URL")
     service_role_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
@@ -255,6 +257,7 @@ def sync_supabase(
             upcoming_only=upcoming_only,
         )
     except Exception as exc:
+        logger.exception("sync_command_failed")
         console.print(f"[red]Sync failed:[/red] {exc}")
         raise typer.Exit(1)
     finally:
@@ -262,7 +265,10 @@ def sync_supabase(
 
     console.print(f"Synced {result.synced} auction(s) to Supabase.")
     if result.failed:
-        console.print(f"[yellow]{result.failed} record(s) failed.[/yellow]")
+        console.print(
+            f"[yellow]{result.failed} record(s) failed.[/yellow] "
+            "Check logs for details or re-run with --verbose."
+        )
         raise typer.Exit(1)
 
 

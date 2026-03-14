@@ -3,6 +3,8 @@
 import datetime
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import AuctionStatus, SaleType, SourceType
 from tdc_auction_calendar.sync.supabase_sync import SyncResult, sync_to_supabase
@@ -46,11 +48,12 @@ class TestSyncToSupabase:
         assert result.synced == 2
         assert result.failed == 0
         mock_table.upsert.assert_called_once()
+        mock_create.assert_called_once_with("https://x.supabase.co", "key123")
 
     @patch("tdc_auction_calendar.sync.supabase_sync.query_auctions")
     @patch("tdc_auction_calendar.sync.supabase_sync.create_client")
     def test_payload_drops_id_field(self, mock_create, mock_query):
-        mock_query.return_value = [_make_auction()]
+        mock_query.return_value = [_make_auction(id=42)]
 
         mock_table = MagicMock()
         mock_create.return_value.table.return_value = mock_table
@@ -154,3 +157,23 @@ class TestSyncToSupabase:
 
         call_kwargs = mock_table.upsert.call_args[1]
         assert call_kwargs["on_conflict"] == "state,county,start_date,sale_type"
+
+    @patch("tdc_auction_calendar.sync.supabase_sync.query_auctions")
+    @patch("tdc_auction_calendar.sync.supabase_sync.create_client")
+    def test_first_batch_failure_aborts(self, mock_create, mock_query):
+        auctions = [
+            _make_auction(county=f"County-{i}", start_date=datetime.date(2027, 1, 1) + datetime.timedelta(days=i))
+            for i in range(150)
+        ]
+        mock_query.return_value = auctions
+
+        mock_table = MagicMock()
+        mock_create.return_value.table.return_value = mock_table
+        mock_table.upsert.return_value.execute.side_effect = Exception("auth error")
+
+        session = MagicMock()
+        with pytest.raises(RuntimeError, match="First batch failed"):
+            sync_to_supabase(session, "https://x.supabase.co", "key123")
+
+        # Should abort after first batch, not attempt remaining batches
+        assert mock_table.upsert.call_count == 1

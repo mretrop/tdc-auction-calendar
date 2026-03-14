@@ -68,8 +68,12 @@ def sync_to_supabase(
             ).execute()
             synced += len(batch)
             logger.info("batch synced", batch_size=len(batch), total_synced=synced)
-        except Exception:
+        except Exception as exc:
             failed += len(batch)
             logger.exception("batch upsert failed", batch_start=i, batch_size=len(batch))
+            if synced == 0:
+                raise RuntimeError(
+                    f"First batch failed — aborting sync. Cause: {exc}"
+                ) from exc
 
     return SyncResult(synced=synced, failed=failed)

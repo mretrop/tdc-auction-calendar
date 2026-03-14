@@ -194,7 +194,7 @@ class TestSyncSupabase:
         assert result.exit_code == 1
         assert "SUPABASE_URL" in result.output
 
-    @patch("tdc_auction_calendar.cli.sync_to_supabase")
+    @patch("tdc_auction_calendar.sync.supabase_sync.sync_to_supabase")
     def test_sync_supabase_success(self, mock_sync, cli_db, monkeypatch):
         from tdc_auction_calendar.sync.supabase_sync import SyncResult
         monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
@@ -205,7 +205,7 @@ class TestSyncSupabase:
         assert result.exit_code == 0
         assert "5" in result.output
 
-    @patch("tdc_auction_calendar.cli.sync_to_supabase")
+    @patch("tdc_auction_calendar.sync.supabase_sync.sync_to_supabase")
     def test_sync_supabase_with_filters(self, mock_sync, cli_db, monkeypatch):
         from tdc_auction_calendar.sync.supabase_sync import SyncResult
         monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
@@ -219,7 +219,7 @@ class TestSyncSupabase:
         assert call_kwargs["states"] == ["FL"]
         assert call_kwargs["upcoming_only"] is True
 
-    @patch("tdc_auction_calendar.cli.sync_to_supabase")
+    @patch("tdc_auction_calendar.sync.supabase_sync.sync_to_supabase")
     def test_sync_supabase_with_failures(self, mock_sync, cli_db, monkeypatch):
         from tdc_auction_calendar.sync.supabase_sync import SyncResult
         monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
@@ -230,6 +230,16 @@ class TestSyncSupabase:
         assert result.exit_code == 1
         assert "80" in result.output
         assert "20" in result.output
+
+    @patch("tdc_auction_calendar.sync.supabase_sync.sync_to_supabase")
+    def test_sync_supabase_exception_exits_1(self, mock_sync, cli_db, monkeypatch):
+        monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+        monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "key123")
+        mock_sync.side_effect = RuntimeError("connection refused")
+
+        result = runner.invoke(app, ["sync", "supabase"])
+        assert result.exit_code == 1
+        assert "Sync failed" in result.output
 
 
 def _make_report(**overrides) -> RunReport:
