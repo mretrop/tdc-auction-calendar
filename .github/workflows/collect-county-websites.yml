@@ -46,6 +46,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --no-dev
 
+      - name: Install Playwright browsers
+        run: uv run playwright install chromium
+
       - name: Collect county website auction data
         run: uv run tdc-auction-calendar collect --collectors county_website
 
