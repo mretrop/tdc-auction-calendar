@@ -8,6 +8,7 @@ import pytest
 from tdc_auction_calendar.collectors.public_notices.base_notice import (
     BaseNoticeCollector,
     NoticeRecord,
+    NoticeResults,
 )
 from tdc_auction_calendar.collectors.scraping.client import ExtractionError
 from tdc_auction_calendar.models.enums import SaleType, SourceType
@@ -186,7 +187,7 @@ async def test_fetch_schema_path():
 
     call_kwargs = mock_client.scrape.call_args[1]
     assert "schema" in call_kwargs
-    assert call_kwargs["schema"] is NoticeRecord
+    assert call_kwargs["schema"] is NoticeResults
     assert "json_options" not in call_kwargs
 
 

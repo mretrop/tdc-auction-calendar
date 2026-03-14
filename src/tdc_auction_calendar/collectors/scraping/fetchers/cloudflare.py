@@ -97,9 +97,9 @@ class CloudflareFetcher:
             raise CloudflareFetchError(
                 f"Cloudflare returned non-JSON response for {url}: {exc}"
             ) from exc
-        if "id" not in body:
+        job_id = body.get("id") or body.get("result")
+        if not job_id:
             raise CloudflareFetchError(f"Cloudflare API response missing 'id': {body}")
-        job_id = body["id"]
 
         # Poll for completion
         elapsed = 0.0

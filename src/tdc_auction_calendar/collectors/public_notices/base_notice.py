@@ -24,6 +24,12 @@ class NoticeRecord(BaseModel):
     sale_type: str = ""
 
 
+class NoticeResults(BaseModel):
+    """Wrapper for LLM extraction — returns a list of notice records."""
+
+    records: list[NoticeRecord]
+
+
 class BaseNoticeCollector(BaseCollector):
     """Base class for public notice site collectors.
 
@@ -102,7 +108,7 @@ class BaseNoticeCollector(BaseCollector):
                         "response_format": NoticeRecord.model_json_schema(),
                     }
                 else:
-                    scrape_kwargs["schema"] = NoticeRecord
+                    scrape_kwargs["schema"] = NoticeResults
                     if js_code is not None:
                         scrape_kwargs["js_code"] = js_code
                     if wait_for is not None:
@@ -119,7 +125,9 @@ class BaseNoticeCollector(BaseCollector):
                     )
                     raise
 
-                if isinstance(result.data, list):
+                if isinstance(result.data, NoticeResults):
+                    raw_records = [r.model_dump() for r in result.data.records]
+                elif isinstance(result.data, list):
                     raw_records = result.data
                 elif result.data is None:
                     raw_records = []
