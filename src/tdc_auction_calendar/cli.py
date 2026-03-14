@@ -6,6 +6,7 @@ import datetime
 import logging
 import os
 
+import structlog
 import typer
 from rich.console import Console
 from sqlalchemy import func
@@ -17,7 +18,7 @@ from tdc_auction_calendar.log_config import configure_logging
 from tdc_auction_calendar.models.auction import AuctionRow
 from tdc_auction_calendar.models.enums import SaleType
 from tdc_auction_calendar.models.jurisdiction import Base, CountyInfoRow, StateRulesRow
-
+logger = structlog.get_logger()
 console = Console(width=200)
 
 app = typer.Typer(
@@ -213,14 +214,62 @@ def export_rss(
     typer.echo(f"Exported {len(auctions)} auction(s).", err=True)
 
 
-# --- Sync stubs ---
+# --- Sync commands ---
 
 
 @sync_app.command("supabase")
-def sync_supabase() -> None:
+def sync_supabase(
+    state: list[str] | None = typer.Option(None, "--state", help="Filter by state code (repeatable)"),
+    sale_type: SaleType | None = typer.Option(None, "--sale-type", help="Filter by sale type"),
+    from_date: str | None = typer.Option(None, "--from-date", help="Start date (YYYY-MM-DD)"),
+    to_date: str | None = typer.Option(None, "--to-date", help="End date (YYYY-MM-DD)"),
+    upcoming_only: bool = typer.Option(False, "--upcoming-only", help="Only include upcoming auctions"),
+) -> None:
     """Upsert auction data to Supabase."""
-    console.print("Not yet implemented. See issue #22.")
-    raise typer.Exit(1)
+    from tdc_auction_calendar.sync.supabase_sync import sync_to_supabase
+
+    supabase_url = os.environ.get("SUPABASE_URL")
+    service_role_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not supabase_url or not service_role_key:
+        console.print(
+            "[red]Missing environment variables.[/red] "
+            "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+        )
+        raise typer.Exit(1)
+
+    if not _check_db_exists():
+        console.print("[red]Database not found.[/red] Run `tdc-auction-calendar collect` first.")
+        raise typer.Exit(1)
+
+    from_parsed, to_parsed = _parse_dates(from_date, to_date)
+
+    session = get_session()
+    try:
+        result = sync_to_supabase(
+            session,
+            supabase_url,
+            service_role_key,
+            states=state,
+            sale_type=sale_type,
+            from_date=from_parsed,
+            to_date=to_parsed,
+            upcoming_only=upcoming_only,
+        )
+    except Exception as exc:
+        logger.exception("sync_command_failed")
+        console.print(f"[red]Sync failed:[/red] {exc}")
+        raise typer.Exit(1)
+    finally:
+        session.close()
+
+    console.print(f"Synced {result.synced} auction(s) to Supabase.")
+    if result.failed:
+        console.print(
+            f"[yellow]{result.failed} record(s) failed.[/yellow] "
+            "Check logs for details or re-run with --verbose."
+        )
+        raise typer.Exit(1)
 
 
 # --- Commands ---
