@@ -7,7 +7,8 @@ from decimal import Decimal
 
 from icalendar import Calendar
 
-from tdc_auction_calendar.exporters.ical import auctions_to_ical, query_auctions
+from tdc_auction_calendar.exporters.filters import query_auctions
+from tdc_auction_calendar.exporters.ical import auctions_to_ical
 from tdc_auction_calendar.models.auction import Auction, AuctionRow
 
 
