@@ -102,7 +102,7 @@ uv run tdc-auction-calendar export json --upcoming-only --compact
 uv run tdc-auction-calendar export rss --state FL --days 30 -o feed.xml
 ```
 
-The `rss` command also accepts `--days N` (auctions from the last N days).
+The `rss` command also accepts `--days N` (shortcut: sets `--from-date` to N days ago, overrides `--from-date` if both provided).
 
 ### Sync Subcommands
 
@@ -165,9 +165,11 @@ graph TD
     URL[Source URL] --> CF{Cloudflare available?}
     CF -->|Yes| CFR[Cloudflare Browser Rendering]
     CF -->|No| C4A[Crawl4AI - local headless browser]
-    CFR --> CFE[Cloudflare JSON Extraction]
-    C4A --> LLM[Claude API tool_use Extraction]
-    URL -->|Stable HTML| CSS[CSS Selector Extraction]
+    CFR --> EX{Extraction}
+    C4A --> EX
+    EX -->|Default| CFE[Cloudflare JSON Extraction]
+    EX -->|Fallback| LLM[Claude API tool_use]
+    EX -->|Stable HTML| CSS[CSS Selectors]
     CFE --> N[Normalize to Auction model]
     LLM --> N
     CSS --> N

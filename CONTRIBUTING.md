@@ -49,7 +49,7 @@ _PROMPT = (
 
 ### 4. Subclass `BaseCollector`
 
-Implement the required properties and methods:
+Implement the required properties and methods (simplified for clarity — see `arkansas.py` for full error handling):
 
 ```python
 from pydantic import ValidationError
@@ -145,10 +145,13 @@ County data lives in `src/tdc_auction_calendar/db/seed/counties.json`. Each entr
 
 | Field | Description |
 |-------|-------------|
+| `fips_code` | FIPS county code (e.g., `"12001"`) — primary key |
 | `state` | Two-letter state code (e.g., `"FL"`) |
 | `county_name` | County name (e.g., `"Alachua"`) |
-| `known_auction_vendor` | Auction vendor if known (e.g., `"RealAuction"`) or `null` |
+| `treasurer_url` | URL to the county treasurer page, or `null` |
 | `tax_sale_page_url` | Direct URL to the county's tax sale page, or `null` |
+| `known_auction_vendor` | Auction vendor if known (e.g., `"RealAuction"`) or `null` |
+| `timezone` | IANA timezone (e.g., `"America/New_York"`) |
 | `priority` | Collection priority: `"high"`, `"medium"`, or `"low"` |
 
 To add or update a county, edit the JSON file and run the seed loader:
