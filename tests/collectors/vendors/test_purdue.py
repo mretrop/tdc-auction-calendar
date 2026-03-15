@@ -1,11 +1,20 @@
 """Tests for Purdue vendor collector."""
 
+from datetime import date
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from pydantic import ValidationError
-from tdc_auction_calendar.collectors.vendors.purdue import parse_listing_markdown
-from tdc_auction_calendar.collectors.vendors.purdue import PurdueCollector
+
 from tdc_auction_calendar.collectors.scraping.client import ScrapeResult
 from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
+from tdc_auction_calendar.collectors.vendors.purdue import (
+    PurdueCollector,
+    download_and_parse_pdf,
+    extract_sale_date,
+    parse_listing_markdown,
+)
 from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
 # Sample markdown matching the structure from data/research/purdue.md
@@ -45,10 +54,6 @@ def test_parse_listing_empty_markdown():
     assert results == []
 
 
-from datetime import date
-from tdc_auction_calendar.collectors.vendors.purdue import extract_sale_date
-
-
 def test_extract_date_with_sale_date_label():
     text = "NOTICE OF SALE\nSale Date: April 7, 2026\nLocation: County Courthouse"
     assert extract_sale_date(text) == date(2026, 4, 7)
@@ -77,11 +82,6 @@ def test_extract_date_with_ordinal():
 def test_extract_date_returns_none_when_no_date():
     text = "This PDF has no date information whatsoever."
     assert extract_sale_date(text) is None
-
-
-from pathlib import Path
-from unittest.mock import AsyncMock, patch, MagicMock
-from tdc_auction_calendar.collectors.vendors.purdue import download_and_parse_pdf
 
 
 async def test_download_and_parse_pdf_extracts_date(tmp_path):
