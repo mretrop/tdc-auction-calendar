@@ -118,21 +118,23 @@ class CloudflareFetcher:
                     f"Cloudflare API server error {poll_resp.status_code} polling job {job_id}"
                 )
             try:
-                data = poll_resp.json()
+                raw = poll_resp.json()
             except ValueError as exc:
                 raise CloudflareFetchError(
                     f"Cloudflare returned non-JSON poll response for job {job_id}: {exc}"
                 ) from exc
+            # Unwrap envelope: response may be {"success":true,"result":{...}} or flat
+            data = raw.get("result", raw) if isinstance(raw.get("result"), dict) else raw
             status = data.get("status")
             if status is None:
                 raise CloudflareFetchError(
-                    f"Cloudflare API response missing 'status': {data}"
+                    f"Cloudflare API response missing 'status': {raw}"
                 )
 
             if status == "running":
                 continue
             if status == "completed":
-                results = data.get("result") or []
+                results = data.get("records") or data.get("result") or []
                 if not results:
                     raise CloudflareFetchError(
                         f"Cloudflare job {job_id} completed but returned no results"
