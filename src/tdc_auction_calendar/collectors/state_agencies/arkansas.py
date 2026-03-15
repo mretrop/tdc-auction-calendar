@@ -2,32 +2,51 @@
 
 from __future__ import annotations
 
-from datetime import date
+import re
+from datetime import date, datetime
 
 import structlog
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from tdc_auction_calendar.collectors.base import BaseCollector
-
-from tdc_auction_calendar.collectors.scraping import ExtractionError, create_scrape_client
+from tdc_auction_calendar.collectors.scraping import create_scrape_client
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SaleType, SourceType
 
 logger = structlog.get_logger()
 
-_URL = "https://cosl.org"
-_PROMPT = (
-    "Extract all county tax deed sale dates from this page. "
-    "Each row should have county name, sale date, and sale type."
-)
+_URL = "https://www.cosl.org/Home/Contents"
+
+_DATE_RE = re.compile(r"\b(\d{1,2}/\d{1,2}/\d{4})\b")
+_COUNTY_RE = re.compile(r"\[\s*([A-Z ]+?)\s*\]\(#\)")
 
 
-class ArkansasAuctionRecord(BaseModel):
-    """Schema for a single Arkansas auction record from COSL."""
+def parse_catalog(markdown: str) -> list[dict]:
+    """Extract (sale_date, county) pairs from COSL catalog markdown.
 
-    county: str
-    sale_date: str
-    sale_type: str = "deed"
+    Walks lines sequentially. A date line sets current_date; each subsequent
+    county link line emits a record pairing that date with the county (title-cased).
+    Counties appearing before any date line are skipped.
+    """
+    records: list[dict] = []
+    current_date: str | None = None
+
+    for line in markdown.splitlines():
+        date_match = _DATE_RE.search(line)
+        if date_match:
+            parsed = datetime.strptime(date_match.group(1), "%m/%d/%Y")
+            current_date = parsed.strftime("%Y-%m-%d")
+            continue
+
+        if current_date is None:
+            continue
+
+        county_match = _COUNTY_RE.search(line)
+        if county_match:
+            county = county_match.group(1).strip().title()
+            records.append({"sale_date": current_date, "county": county})
+
+    return records
 
 
 class ArkansasCollector(BaseCollector):
@@ -42,48 +61,35 @@ class ArkansasCollector(BaseCollector):
         return SourceType.STATE_AGENCY
 
     async def _fetch(self) -> list[Auction]:
-        json_options = {
-            "prompt": _PROMPT,
-            "response_format": ArkansasAuctionRecord.model_json_schema(),
-        }
         client = create_scrape_client()
         try:
-            result = await client.scrape(_URL, json_options=json_options)
+            result = await client.scrape(_URL)
         finally:
             await client.close()
 
-        raw_records: list = (
-            result.data
-            if isinstance(result.data, list)
-            else ([result.data] if result.data is not None else [])
-        )
+        markdown = result.fetch.markdown or ""
+        raw_records = parse_catalog(markdown)
+
+        if markdown and not raw_records:
+            logger.warning(
+                "no_records_parsed",
+                collector=self.name,
+                url=_URL,
+                markdown_length=len(markdown),
+            )
 
         auctions: list[Auction] = []
-        failure_count = 0
         for raw in raw_records:
             try:
                 auctions.append(self.normalize(raw))
             except (KeyError, TypeError, ValueError, ValidationError) as exc:
-                failure_count += 1
                 logger.error(
                     "normalize_failed",
                     collector=self.name,
                     raw=raw,
                     error=str(exc),
-                    error_type=type(exc).__name__,
                 )
-        if failure_count:
-            logger.error(
-                "normalize_summary",
-                collector=self.name,
-                total=len(raw_records),
-                succeeded=len(auctions),
-                failed=failure_count,
-            )
-        if raw_records and not auctions:
-            raise ExtractionError(
-                f"{self.name}: all {len(raw_records)} records failed normalization"
-            )
+
         return auctions
 
     def normalize(self, raw: dict) -> Auction:
