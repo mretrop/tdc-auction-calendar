@@ -2,11 +2,24 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
+import time
 from datetime import date, datetime
+from pathlib import Path
+
+import httpx
+import structlog
+from pypdf import PdfReader
 
 _BASE_URL = "https://www.pbfcm.com"
 _LISTING_URL = f"{_BASE_URL}/taxsale.html"
+
+logger = structlog.get_logger()
+
+_PDF_CACHE_DIR = Path("data/research/purdue_pdfs")
+_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60  # 7 days
+_DOWNLOAD_DELAY = 0.5  # seconds between PDF downloads
 
 # Matches "* COUNTY NAME COUNTY" at start of line (top-level list item)
 _COUNTY_RE = re.compile(r"^\*\s+([A-Z\s]+?)\s*COUNTY\s*$", re.MULTILINE)
@@ -93,3 +106,54 @@ def _parse_month_name_match(m: re.Match) -> date:
     month_str, day_str, year_str = m.group(1), m.group(2), m.group(3)
     dt = datetime.strptime(f"{month_str} {day_str} {year_str}", "%B %d %Y")
     return dt.date()
+
+
+def _is_cache_fresh(path: Path) -> bool:
+    """Check if a cached PDF is less than 7 days old."""
+    if not path.exists():
+        return False
+    age = time.time() - path.stat().st_mtime
+    return age < _CACHE_TTL_SECONDS
+
+
+async def download_and_parse_pdf(
+    client: httpx.AsyncClient,
+    url: str,
+    cache_dir: Path | None = None,
+) -> date | None:
+    """Download a PDF (with caching), extract text, and parse the sale date.
+
+    Returns None if download fails, text extraction fails, or no date found.
+    """
+    if cache_dir is None:
+        cache_dir = _PDF_CACHE_DIR
+
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    filename = url.rsplit("/", 1)[-1]
+    cached_path = cache_dir / filename
+
+    # Download if not cached or stale
+    if not _is_cache_fresh(cached_path):
+        response = await client.get(url)
+        if response.status_code != 200:
+            logger.warning(
+                "pdf_download_failed",
+                url=url,
+                status_code=response.status_code,
+            )
+            return None
+        cached_path.write_bytes(response.content)
+
+    # Extract text
+    try:
+        reader = PdfReader(cached_path)
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    except Exception as exc:
+        logger.warning("pdf_text_extraction_failed", url=url, error=str(exc))
+        return None
+
+    # Parse date
+    sale_date = extract_sale_date(text)
+    if sale_date is None:
+        logger.warning("pdf_no_date_found", url=url)
+    return sale_date

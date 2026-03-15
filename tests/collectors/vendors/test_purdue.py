@@ -71,3 +71,75 @@ def test_extract_date_with_ordinal():
 def test_extract_date_returns_none_when_no_date():
     text = "This PDF has no date information whatsoever."
     assert extract_sale_date(text) is None
+
+
+from pathlib import Path
+from unittest.mock import AsyncMock, patch, MagicMock
+from tdc_auction_calendar.collectors.vendors.purdue import download_and_parse_pdf
+
+
+async def test_download_and_parse_pdf_extracts_date(tmp_path):
+    """Test PDF download + date extraction with a mocked httpx response and pypdf."""
+    pdf_dir = tmp_path / "pdfs"
+    pdf_dir.mkdir()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.content = b"%PDF-fake-content"
+
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    with patch(
+        "tdc_auction_calendar.collectors.vendors.purdue.PdfReader"
+    ) as mock_reader_cls:
+        mock_page = MagicMock()
+        mock_page.extract_text.return_value = "Sale Date: April 7, 2026\nProperties:"
+        mock_reader_cls.return_value.pages = [mock_page]
+
+        result = await download_and_parse_pdf(
+            mock_client, "https://www.pbfcm.com/docs/test.pdf", pdf_dir
+        )
+
+    assert result == date(2026, 4, 7)
+
+
+async def test_download_and_parse_pdf_returns_none_on_http_error(tmp_path):
+    pdf_dir = tmp_path / "pdfs"
+    pdf_dir.mkdir()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 404
+
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    result = await download_and_parse_pdf(
+        mock_client, "https://www.pbfcm.com/docs/missing.pdf", pdf_dir
+    )
+    assert result is None
+
+
+async def test_download_and_parse_pdf_uses_cache(tmp_path):
+    """If PDF already exists and is fresh, don't re-download."""
+    pdf_dir = tmp_path / "pdfs"
+    pdf_dir.mkdir()
+
+    cached = pdf_dir / "test.pdf"
+    cached.write_bytes(b"%PDF-cached")
+
+    mock_client = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.vendors.purdue.PdfReader"
+    ) as mock_reader_cls:
+        mock_page = MagicMock()
+        mock_page.extract_text.return_value = "Sale Date: June 1, 2026"
+        mock_reader_cls.return_value.pages = [mock_page]
+
+        result = await download_and_parse_pdf(
+            mock_client, "https://www.pbfcm.com/docs/test.pdf", pdf_dir
+        )
+
+    mock_client.get.assert_not_called()
+    assert result == date(2026, 6, 1)
