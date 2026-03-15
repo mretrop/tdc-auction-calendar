@@ -49,6 +49,17 @@ def test_parse_listing_multi_precinct_produces_multiple_entries():
     assert len(fort_bend_entries) == 2
 
 
+def test_parse_listing_handles_absolute_urls():
+    """Live site returns absolute URLs — should not double-prefix."""
+    md = """\
+* BRAZORIA COUNTY
+   * [Brazoria County](https://www.pbfcm.com/docs/taxdocs/sales/04-2026brazoriataxsale.pdf)
+"""
+    results = parse_listing_markdown(md)
+    assert len(results) == 1
+    assert results[0][1] == "https://www.pbfcm.com/docs/taxdocs/sales/04-2026brazoriataxsale.pdf"
+
+
 def test_parse_listing_empty_markdown():
     results = parse_listing_markdown("")
     assert results == []

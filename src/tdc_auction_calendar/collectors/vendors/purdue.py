@@ -51,8 +51,8 @@ def parse_listing_markdown(markdown: str) -> list[tuple[str, str]]:
         if current_county:
             pdf_match = _PDF_LINK_RE.search(line)
             if pdf_match:
-                relative_url = pdf_match.group(2)
-                full_url = f"{_BASE_URL}/{relative_url}"
+                url = pdf_match.group(2)
+                full_url = url if url.startswith("http") else f"{_BASE_URL}/{url}"
                 results.append((current_county, full_url))
 
     return results
