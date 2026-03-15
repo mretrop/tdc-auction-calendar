@@ -21,6 +21,7 @@ class SourceType(StrEnum):
     STATE_AGENCY = "state_agency"
     PUBLIC_NOTICE = "public_notice"
     COUNTY_WEBSITE = "county_website"
+    VENDOR = "vendor"
 
 
 class Priority(StrEnum):
@@ -35,3 +36,4 @@ class Vendor(StrEnum):
     GOVEASE = "GovEase"
     GRANT_STREET = "Grant Street"
     SRI = "SRI"
+    PURDUE = "Purdue, Brandon, Fielder, Collins & Mott"
