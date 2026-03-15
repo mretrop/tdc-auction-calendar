@@ -37,3 +37,37 @@ def test_parse_listing_multi_precinct_produces_multiple_entries():
 def test_parse_listing_empty_markdown():
     results = parse_listing_markdown("")
     assert results == []
+
+
+from datetime import date
+from tdc_auction_calendar.collectors.vendors.purdue import extract_sale_date
+
+
+def test_extract_date_with_sale_date_label():
+    text = "NOTICE OF SALE\nSale Date: April 7, 2026\nLocation: County Courthouse"
+    assert extract_sale_date(text) == date(2026, 4, 7)
+
+
+def test_extract_date_with_date_of_sale_label():
+    text = "Date of Sale: March 17, 2026 at 10:00 AM"
+    assert extract_sale_date(text) == date(2026, 3, 17)
+
+
+def test_extract_date_month_name_no_label():
+    text = "Tax Foreclosure\nThe sale will be held on June 3, 2026"
+    assert extract_sale_date(text) == date(2026, 6, 3)
+
+
+def test_extract_date_numeric_format():
+    text = "Sale scheduled for 04/07/2026 at the courthouse"
+    assert extract_sale_date(text) == date(2026, 4, 7)
+
+
+def test_extract_date_with_ordinal():
+    text = "Sale Date: April 7th, 2026"
+    assert extract_sale_date(text) == date(2026, 4, 7)
+
+
+def test_extract_date_returns_none_when_no_date():
+    text = "This PDF has no date information whatsoever."
+    assert extract_sale_date(text) is None
