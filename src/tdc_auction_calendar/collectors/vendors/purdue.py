@@ -12,6 +12,11 @@ import httpx
 import structlog
 from pypdf import PdfReader
 
+from tdc_auction_calendar.collectors.base import BaseCollector
+from tdc_auction_calendar.collectors.scraping import create_scrape_client
+from tdc_auction_calendar.models.auction import Auction
+from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
+
 _BASE_URL = "https://www.pbfcm.com"
 _LISTING_URL = f"{_BASE_URL}/taxsale.html"
 
@@ -157,3 +162,74 @@ async def download_and_parse_pdf(
     if sale_date is None:
         logger.warning("pdf_no_date_found", url=url)
     return sale_date
+
+
+class PurdueCollector(BaseCollector):
+    """Collects Texas tax foreclosure sale dates from pbfcm.com."""
+
+    @property
+    def name(self) -> str:
+        return "purdue_vendor"
+
+    @property
+    def source_type(self) -> SourceType:
+        return SourceType.VENDOR
+
+    async def _fetch(self) -> list[Auction]:
+        # Phase 1: Fetch listing page
+        client = create_scrape_client()
+        try:
+            result = await client.scrape(_LISTING_URL)
+        finally:
+            await client.close()
+
+        markdown = result.fetch.markdown or ""
+        entries = parse_listing_markdown(markdown)
+
+        if not entries:
+            logger.warning("purdue_no_entries_found", url=_LISTING_URL)
+            return []
+
+        # Phase 2: Download and parse PDFs
+        auctions: list[Auction] = []
+        failure_count = 0
+
+        async with httpx.AsyncClient() as http_client:
+            for i, (county, pdf_url) in enumerate(entries):
+                if i > 0:
+                    await asyncio.sleep(_DOWNLOAD_DELAY)
+
+                sale_date = await download_and_parse_pdf(http_client, pdf_url)
+                if sale_date is None:
+                    failure_count += 1
+                    continue
+
+                raw = {
+                    "county": county,
+                    "date": sale_date.isoformat(),
+                    "pdf_url": pdf_url,
+                }
+                auctions.append(self.normalize(raw))
+
+        if failure_count:
+            logger.error(
+                "purdue_pdf_failures",
+                total=len(entries),
+                succeeded=len(auctions),
+                failed=failure_count,
+            )
+
+        return auctions
+
+    def normalize(self, raw: dict) -> Auction:
+        """Convert a raw record into a validated Auction."""
+        return Auction(
+            state="TX",
+            county=raw["county"],
+            start_date=date.fromisoformat(raw["date"]),
+            sale_type=SaleType.DEED,
+            source_type=SourceType.VENDOR,
+            source_url=raw["pdf_url"],
+            confidence_score=0.80,
+            vendor=Vendor.PURDUE,
+        )
