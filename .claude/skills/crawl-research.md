@@ -103,6 +103,8 @@ async def main(targets: list[str]) -> None:
                 ok += 1
             except Exception as exc:
                 print(f"  FAIL {name}: {type(exc).__name__}: {exc}")
+            # Delay between sites to avoid Cloudflare rate limits
+            await asyncio.sleep(5)
     finally:
         await fetcher.close()
 
