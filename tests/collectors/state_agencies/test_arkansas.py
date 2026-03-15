@@ -109,3 +109,91 @@ def test_parse_catalog_full_fixture():
     # Spot-check first and last
     assert result[0] == {"sale_date": "2026-03-05", "county": "Sevier"}
     assert result[-1] == {"sale_date": "2026-09-23", "county": "Sevier"}
+
+
+# ── normalize tests ───────────────────────────────────────────────────
+
+
+def test_normalize_valid_record(collector):
+    raw = {"county": "Pulaski", "sale_date": "2026-06-10"}
+    auction = collector.normalize(raw)
+    assert auction.state == "AR"
+    assert auction.county == "Pulaski"
+    assert auction.start_date == date(2026, 6, 10)
+    assert auction.sale_type == SaleType.DEED
+    assert auction.source_type == SourceType.STATE_AGENCY
+    assert auction.confidence_score == 0.85
+    assert auction.source_url == "https://www.cosl.org/Home/Contents"
+
+
+def test_normalize_missing_county_raises(collector):
+    with pytest.raises((ValidationError, ValueError, KeyError)):
+        collector.normalize({"sale_date": "2026-06-10"})
+
+
+def test_normalize_invalid_date_raises(collector):
+    raw = {"county": "Pulaski", "sale_date": "not-a-date"}
+    with pytest.raises((ValidationError, ValueError)):
+        collector.normalize(raw)
+
+
+# ── _fetch integration tests ─────────────────────────────────────────
+
+
+def _mock_scrape_result(markdown: str) -> ScrapeResult:
+    return ScrapeResult(
+        fetch=FetchResult(
+            url="https://www.cosl.org/Home/Contents",
+            status_code=200,
+            fetcher="cloudflare",
+            markdown=markdown,
+        ),
+    )
+
+
+async def test_fetch_returns_auctions(collector):
+    fixture_md = _load_fixture()
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(fixture_md)
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.state_agencies.arkansas.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) == 9
+    assert all(a.state == "AR" for a in auctions)
+    assert all(a.source_type == SourceType.STATE_AGENCY for a in auctions)
+    assert all(a.source_url == "https://www.cosl.org/Home/Contents" for a in auctions)
+
+
+async def test_fetch_empty_markdown_returns_empty(collector):
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result("")
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.state_agencies.arkansas.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert auctions == []
+
+
+async def test_collect_dedup(collector):
+    """Duplicate county+date pairs are deduplicated."""
+    md = "7/14/2026 12:00 AM\n\n[ PRAIRIE](#)\n\n[ PRAIRIE](#)\n"
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(md)
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.state_agencies.arkansas.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) == 1
