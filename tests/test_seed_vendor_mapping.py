@@ -127,10 +127,20 @@ def test_spot_check_known_mappings(seed_data):
     )
 
 
-def test_all_five_vendors_represented(seed_data):
-    """All five vendors must have at least one entry."""
+def test_all_portal_vendors_represented(seed_data):
+    """All portal-based vendors must have at least one seed entry.
+
+    Vendors with dedicated collectors (e.g., Purdue) don't use the
+    vendor_mapping seed and are excluded from this check.
+    """
+    from tdc_auction_calendar.models.enums import Vendor
+
+    # Vendors that have their own dedicated collectors, not portal mappings
+    dedicated_collector_vendors = {Vendor.PURDUE}
+    portal_vendors = ALLOWED_VENDORS - dedicated_collector_vendors
+
     vendors_present = {e["vendor"] for e in seed_data}
-    missing = ALLOWED_VENDORS - vendors_present
+    missing = portal_vendors - vendors_present
     assert not missing, f"Vendors with no entries: {missing}"
 
 

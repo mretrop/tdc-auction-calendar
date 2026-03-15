@@ -22,6 +22,7 @@ from tdc_auction_calendar.collectors.state_agencies import (
     IowaCollector,
 )
 from tdc_auction_calendar.collectors.statutory import StatutoryCollector
+from tdc_auction_calendar.collectors.vendors import PurdueCollector
 
 __all__ = [
     "ArkansasCollector",
@@ -36,6 +37,7 @@ __all__ = [
     "NewJerseyCollector",
     "NorthCarolinaCollector",
     "PennsylvaniaCollector",
+    "PurdueCollector",
     "SouthCarolinaCollector",
     "StatutoryCollector",
     "UtahCollector",
