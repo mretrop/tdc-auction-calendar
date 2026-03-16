@@ -46,9 +46,9 @@ Collectors use a two-tier fetch+extract architecture built on `ScrapeClient`:
 - **Fallback extraction:** `LLMExtraction` (Claude API tool_use) — used when Crawl4AI is the fetcher (no built-in extraction)
 - **Lightweight extraction:** `CSSExtraction` — available for sources with stable, simple HTML structure
 
-Most collectors define a Pydantic schema and extraction prompt. When Cloudflare is primary, extraction happens in a single round trip. When falling back to Crawl4AI, `LLMExtraction` handles extraction as a separate step. Some collectors with stable, structured sources use deterministic regex parsing instead of LLM extraction (e.g., `ArkansasCollector`, `MVBACollector`).
+Most collectors define a Pydantic schema and extraction prompt. When Cloudflare is primary, extraction happens in a single round trip. When falling back to Crawl4AI, `LLMExtraction` handles extraction as a separate step. Some collectors with stable, structured sources use deterministic parsing instead of LLM extraction (e.g., `ArkansasCollector`, `MVBACollector` use regex; `RealAuctionCollector` uses BeautifulSoup CSS selectors on raw HTML).
 
-Crawl4AI supports three stealth levels via `StealthLevel` enum: `OFF` (plain browser), `STEALTH` (default — `playwright-stealth` + `magic` mode), `UNDETECTED` (opt-in — adds `UndetectedAdapter` for Akamai-level protection). Collectors targeting bot-protected sites use `create_scrape_client(stealth=StealthLevel.UNDETECTED)`.
+Crawl4AI supports three stealth levels via `StealthLevel` enum: `OFF` (plain browser), `STEALTH` (default — `playwright-stealth` + `magic` mode), `UNDETECTED` (opt-in — adds `UndetectedAdapter` for Akamai-level protection). Collectors targeting bot-protected sites use `create_scrape_client(stealth=StealthLevel.UNDETECTED)`. Note: `magic` mode can interfere with some sites (e.g., RealAuction redirects to splash page) — use `StealthLevel.OFF` when magic causes issues.
 
 Key files: `collectors/scraping/client.py` (orchestrator), `collectors/scraping/fetchers/cloudflare.py`, `collectors/scraping/fetchers/crawl4ai.py`, `collectors/scraping/extraction.py`
 
@@ -61,6 +61,7 @@ Key files: `collectors/scraping/client.py` (orchestrator), `collectors/scraping/
 - **anthropic** for Claude API fallback parsing (LLMExtraction)
 - **structlog** for structured JSON logging
 - **supabase** for cloud sync
+- **beautifulsoup4** for HTML parsing (RealAuction collector)
 - **httpx** for Cloudflare API calls
 
 ## Conventions
