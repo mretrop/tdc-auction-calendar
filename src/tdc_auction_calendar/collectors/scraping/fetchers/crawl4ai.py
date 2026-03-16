@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Any
 
 import structlog
@@ -12,23 +13,56 @@ from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResu
 logger = structlog.get_logger()
 
 
+class StealthLevel(StrEnum):
+    """Controls anti-bot evasion level for the Crawl4AI browser."""
+
+    OFF = "off"
+    STEALTH = "stealth"
+    UNDETECTED = "undetected"
+
+
 class Crawl4AiFetcher:
     """Fetches pages via Crawl4AI's AsyncWebCrawler."""
 
-    def __init__(self, crawler: Any = None) -> None:
+    def __init__(
+        self,
+        crawler: Any = None,
+        stealth: StealthLevel = StealthLevel.STEALTH,
+    ) -> None:
         self._crawler = crawler
         self._owns_crawler = crawler is None
+        self._stealth = stealth
 
     async def _get_crawler(self) -> Any:
         if self._crawler is None:
             try:
                 from crawl4ai import AsyncWebCrawler
+                from crawl4ai.async_configs import BrowserConfig
             except ImportError as exc:
                 raise RuntimeError(
                     "crawl4ai is required but not installed. Install with: uv add crawl4ai"
                 ) from exc
 
-            crawler = AsyncWebCrawler()
+            logger.info("crawl4ai_init", stealth=self._stealth.value)
+
+            if self._stealth == StealthLevel.OFF:
+                crawler = AsyncWebCrawler()
+            elif self._stealth == StealthLevel.STEALTH:
+                browser_config = BrowserConfig(headless=True, enable_stealth=True)
+                crawler = AsyncWebCrawler(config=browser_config)
+            else:
+                # UNDETECTED — uses UndetectedAdapter for tougher bot protection
+                from crawl4ai import UndetectedAdapter
+                from crawl4ai.async_crawler_strategy import AsyncPlaywrightCrawlerStrategy
+
+                browser_config = BrowserConfig(headless=True, enable_stealth=True)
+                adapter = UndetectedAdapter()
+                strategy = AsyncPlaywrightCrawlerStrategy(
+                    browser_config=browser_config,
+                    browser_adapter=adapter,
+                )
+                crawler = AsyncWebCrawler(crawler_strategy=strategy)
+
             try:
                 await crawler.__aenter__()
             except Exception as exc:
@@ -53,12 +87,14 @@ class Crawl4AiFetcher:
 
         crawler = await self._get_crawler()
         try:
-            kwargs: dict = {}
-            if js_code is not None:
-                kwargs["js_code"] = js_code
-            if wait_for is not None:
-                kwargs["wait_for"] = wait_for
-            result = await crawler.arun(url, **kwargs)
+            from crawl4ai.async_configs import CrawlerRunConfig
+
+            run_config = CrawlerRunConfig(
+                js_code=js_code,
+                wait_for=wait_for,
+                magic=(self._stealth != StealthLevel.OFF),
+            )
+            result = await crawler.arun(url, config=run_config)
         except (OSError, RuntimeError):
             raise
         except Exception as exc:

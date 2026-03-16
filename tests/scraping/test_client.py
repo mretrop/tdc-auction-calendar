@@ -14,6 +14,7 @@ from tdc_auction_calendar.collectors.scraping.client import (
     ScrapeResult,
     create_scrape_client,
 )
+from tdc_auction_calendar.collectors.scraping.fetchers.crawl4ai import Crawl4AiFetcher, StealthLevel
 from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
 from tdc_auction_calendar.collectors.scraping.rate_limiter import RateLimiter
 
@@ -316,6 +317,38 @@ def test_create_scrape_client_invalid_env_var(tmp_path, monkeypatch):
 
     with pytest.raises(ValueError, match="SCRAPE_CACHE_TTL"):
         create_scrape_client(cache_dir=str(tmp_path))
+
+
+def test_create_scrape_client_default_stealth(tmp_path, monkeypatch):
+    """Default create_scrape_client uses STEALTH level on Crawl4AiFetcher."""
+    monkeypatch.delenv("CLOUDFLARE_ACCOUNT_ID", raising=False)
+    monkeypatch.delenv("CLOUDFLARE_API_TOKEN", raising=False)
+
+    client = create_scrape_client(cache_dir=str(tmp_path))
+    assert isinstance(client._primary, Crawl4AiFetcher)
+    assert client._primary._stealth == StealthLevel.STEALTH
+
+
+def test_create_scrape_client_undetected_stealth(tmp_path, monkeypatch):
+    """Explicit UNDETECTED stealth flows to Crawl4AiFetcher."""
+    monkeypatch.delenv("CLOUDFLARE_ACCOUNT_ID", raising=False)
+    monkeypatch.delenv("CLOUDFLARE_API_TOKEN", raising=False)
+
+    client = create_scrape_client(cache_dir=str(tmp_path), stealth=StealthLevel.UNDETECTED)
+    assert client._primary._stealth == StealthLevel.UNDETECTED
+
+
+def test_create_scrape_client_stealth_on_fallback(tmp_path, monkeypatch):
+    """With Cloudflare primary, stealth param applies to fallback Crawl4AiFetcher."""
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", "test-acct")
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN", "test-token")
+
+    client = create_scrape_client(
+        cache_dir=str(tmp_path),
+        stealth=StealthLevel.UNDETECTED,
+    )
+    assert isinstance(client._fallback, Crawl4AiFetcher)
+    assert client._fallback._stealth == StealthLevel.UNDETECTED
 
 
 # --- API key gating and BudgetLogger wiring tests (issue #14) ---

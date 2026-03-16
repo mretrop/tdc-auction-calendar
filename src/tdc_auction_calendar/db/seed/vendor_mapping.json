@@ -2,9 +2,107 @@
   {
     "vendor": "RealAuction",
     "vendor_url": "https://www.realauction.com",
+    "state": "AZ",
+    "county": "Apache",
+    "portal_url": "https://apache.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "AZ",
+    "county": "Coconino",
+    "portal_url": "https://coconino.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "AZ",
+    "county": "Mohave",
+    "portal_url": "https://mohave.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "CO",
+    "county": "Adams",
+    "portal_url": "https://adams.treasurersdeedsale.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "CO",
+    "county": "Denver",
+    "portal_url": "https://denver.treasurersdeedsale.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "CO",
+    "county": "Eagle",
+    "portal_url": "https://eagle.treasurersdeedsale.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "CO",
+    "county": "El Paso",
+    "portal_url": "https://elpasoco.treasurersdeedsale.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "CO",
+    "county": "Larimer",
+    "portal_url": "https://larimer.treasurersdeedsale.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "CO",
+    "county": "Mesa",
+    "portal_url": "https://mesa.treasurersdeedsale.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "CO",
+    "county": "Pitkin",
+    "portal_url": "https://pitkin.treasurersdeedsale.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "CO",
+    "county": "Weld",
+    "portal_url": "https://weld.treasurersdeedsale.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
     "state": "FL",
-    "county": "Miami-Dade",
-    "portal_url": "https://miamidade.realforeclose.com"
+    "county": "Alachua",
+    "portal_url": "https://alachua.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Baker",
+    "portal_url": "https://baker.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Bay",
+    "portal_url": "https://bay.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Brevard",
+    "portal_url": "https://brevard.realtaxdeed.com"
   },
   {
     "vendor": "RealAuction",
@@ -17,92 +115,29 @@
     "vendor": "RealAuction",
     "vendor_url": "https://www.realauction.com",
     "state": "FL",
-    "county": "Palm Beach",
-    "portal_url": "https://palmbeach.realforeclose.com"
+    "county": "Calhoun",
+    "portal_url": "https://calhoun.realforeclose.com"
   },
   {
     "vendor": "RealAuction",
     "vendor_url": "https://www.realauction.com",
     "state": "FL",
-    "county": "Hillsborough",
-    "portal_url": "https://hillsborough.realforeclose.com"
+    "county": "Charlotte",
+    "portal_url": "https://charlotte.realforeclose.com"
   },
   {
     "vendor": "RealAuction",
     "vendor_url": "https://www.realauction.com",
     "state": "FL",
-    "county": "Orange",
-    "portal_url": "https://orange.realforeclose.com"
+    "county": "Citrus",
+    "portal_url": "https://citrus.realtaxdeed.com"
   },
   {
     "vendor": "RealAuction",
     "vendor_url": "https://www.realauction.com",
     "state": "FL",
-    "county": "Duval",
-    "portal_url": "https://duval.realforeclose.com"
-  },
-  {
-    "vendor": "RealAuction",
-    "vendor_url": "https://www.realauction.com",
-    "state": "FL",
-    "county": "Pinellas",
-    "portal_url": "https://pinellas.realforeclose.com"
-  },
-  {
-    "vendor": "RealAuction",
-    "vendor_url": "https://www.realauction.com",
-    "state": "FL",
-    "county": "Lee",
-    "portal_url": "https://lee.realforeclose.com"
-  },
-  {
-    "vendor": "RealAuction",
-    "vendor_url": "https://www.realauction.com",
-    "state": "FL",
-    "county": "Polk",
-    "portal_url": "https://polk.realforeclose.com"
-  },
-  {
-    "vendor": "RealAuction",
-    "vendor_url": "https://www.realauction.com",
-    "state": "FL",
-    "county": "Brevard",
-    "portal_url": "https://brevard.realforeclose.com"
-  },
-  {
-    "vendor": "RealAuction",
-    "vendor_url": "https://www.realauction.com",
-    "state": "FL",
-    "county": "Volusia",
-    "portal_url": "https://volusia.realforeclose.com"
-  },
-  {
-    "vendor": "RealAuction",
-    "vendor_url": "https://www.realauction.com",
-    "state": "FL",
-    "county": "Seminole",
-    "portal_url": "https://seminole.realforeclose.com"
-  },
-  {
-    "vendor": "RealAuction",
-    "vendor_url": "https://www.realauction.com",
-    "state": "FL",
-    "county": "Sarasota",
-    "portal_url": "https://sarasota.realforeclose.com"
-  },
-  {
-    "vendor": "RealAuction",
-    "vendor_url": "https://www.realauction.com",
-    "state": "FL",
-    "county": "Pasco",
-    "portal_url": "https://pasco.realforeclose.com"
-  },
-  {
-    "vendor": "RealAuction",
-    "vendor_url": "https://www.realauction.com",
-    "state": "FL",
-    "county": "Manatee",
-    "portal_url": "https://manatee.realforeclose.com"
+    "county": "Clay",
+    "portal_url": "https://clay.realtaxdeed.com"
   },
   {
     "vendor": "RealAuction",
@@ -115,29 +150,267 @@
     "vendor": "RealAuction",
     "vendor_url": "https://www.realauction.com",
     "state": "FL",
+    "county": "Duval",
+    "portal_url": "https://duval.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
     "county": "Escambia",
-    "portal_url": "https://escambia.realforeclose.com"
+    "portal_url": "https://escambia.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Flagler",
+    "portal_url": "https://flagler.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Gilchrist",
+    "portal_url": "https://gilchrist.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Gulf",
+    "portal_url": "https://gulf.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Hendry",
+    "portal_url": "https://hendry.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Hernando",
+    "portal_url": "https://hernando.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Highlands",
+    "portal_url": "https://highlands.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Hillsborough",
+    "portal_url": "https://hillsborough.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Indian River",
+    "portal_url": "https://indianriver.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Jackson",
+    "portal_url": "https://jackson.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Lake",
+    "portal_url": "https://lake.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Lee",
+    "portal_url": "https://lee.realtaxdeed.com"
   },
   {
     "vendor": "RealAuction",
     "vendor_url": "https://www.realauction.com",
     "state": "FL",
     "county": "Leon",
-    "portal_url": "https://leon.realforeclose.com"
+    "portal_url": "https://leon.realtaxdeed.com"
   },
   {
     "vendor": "RealAuction",
     "vendor_url": "https://www.realauction.com",
     "state": "FL",
-    "county": "Osceola",
-    "portal_url": "https://osceola.realforeclose.com"
+    "county": "Manatee",
+    "portal_url": "https://manatee.realforeclose.com"
   },
   {
     "vendor": "RealAuction",
     "vendor_url": "https://www.realauction.com",
     "state": "FL",
     "county": "Marion",
-    "portal_url": "https://marion.realforeclose.com"
+    "portal_url": "https://marion.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Martin",
+    "portal_url": "https://martin.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Miami-Dade",
+    "portal_url": "https://miamidade.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Monroe",
+    "portal_url": "https://monroe.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Nassau",
+    "portal_url": "https://nassau.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Okeechobee",
+    "portal_url": "https://okeechobee.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Orange",
+    "portal_url": "https://orange.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Osceola",
+    "portal_url": "https://osceola.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Palm Beach",
+    "portal_url": "https://palmbeach.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Pasco",
+    "portal_url": "https://pasco.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Pinellas",
+    "portal_url": "https://pinellas.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Polk",
+    "portal_url": "https://polk.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Putnam",
+    "portal_url": "https://putnam.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Santa Rosa",
+    "portal_url": "https://santarosa.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Sarasota",
+    "portal_url": "https://sarasota.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Seminole",
+    "portal_url": "https://seminole.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "St. Lucie",
+    "portal_url": "https://stlucie.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Suwannee",
+    "portal_url": "https://suwannee.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Volusia",
+    "portal_url": "https://volusia.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Walton",
+    "portal_url": "https://walton.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "FL",
+    "county": "Washington",
+    "portal_url": "https://washington.realtaxdeed.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "NJ",
+    "county": "Sussex",
+    "portal_url": "https://hardystonnj.realforeclose.com"
+  },
+  {
+    "vendor": "RealAuction",
+    "vendor_url": "https://www.realauction.com",
+    "state": "NJ",
+    "county": "Essex",
+    "portal_url": "https://newarknj.realforeclose.com"
   },
   {
     "vendor": "Bid4Assets",
