@@ -24,6 +24,11 @@ _MONTHS = {
     "September": 9, "October": 10, "November": 11, "December": 12,
 }
 
+# Matches cross-month patterns like "October 27th - November 13th"
+_DATE_RANGE_CROSS_MONTH_RE = re.compile(
+    r"([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)\s*-\s*([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)"
+)
+
 # Matches patterns like "May 8th - 12th", "April 22nd - 22nd"
 _DATE_RANGE_RE = re.compile(
     r"([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)\s*-\s*(\d{1,2})(?:st|nd|rd|th)"
@@ -44,6 +49,28 @@ def parse_date_range(
         (start_date, end_date) tuple, or None if unparseable.
         end_date is None for single-day auctions (start == end).
     """
+    # Try cross-month regex first (more specific)
+    cm = _DATE_RANGE_CROSS_MONTH_RE.search(text)
+    if cm is not None:
+        start_month_name = cm.group(1)
+        start_day_str = cm.group(2)
+        end_month_name = cm.group(3)
+        end_day_str = cm.group(4)
+
+        start_month_num = _MONTHS.get(start_month_name)
+        end_month_num = _MONTHS.get(end_month_name)
+        if start_month_num is None or end_month_num is None:
+            return None
+
+        try:
+            start_date = date(year, start_month_num, int(start_day_str))
+            end_date = date(year, end_month_num, int(end_day_str))
+        except ValueError:
+            return None
+
+        return start_date, end_date
+
+    # Fall back to single-month regex
     m = _DATE_RANGE_RE.search(text)
     if m is None:
         return None
@@ -88,6 +115,14 @@ def parse_date_range(
 _TITLE_COUNTY_STATE_RE = re.compile(
     r"^(.+?)\s+County,\s*([A-Z]{2})\s+"
 )
+# Matches: "Grays Harbor, WA Tax ..." (no "County" keyword, comma + state)
+_TITLE_NO_COUNTY_RE = re.compile(
+    r"^(.+?),\s*([A-Z]{2})\s+Tax\s+"
+)
+# Matches: "Monroe PA Repository" (no comma, no "County")
+_TITLE_STATE_REPOSITORY_RE = re.compile(
+    r"^(.+?)\s+([A-Z]{2})\s+Repository"
+)
 # Matches: "City Name Tax ..." (no comma/state — independent cities)
 _TITLE_CITY_RE = re.compile(
     r"^(.+?)\s+Tax\s+"
@@ -112,19 +147,29 @@ def parse_title(title: str) -> tuple[str, str | None, SaleType] | None:
     """
     title = title.strip()
 
-    # Try "County Name, ST ..." pattern first
+    # Try patterns in order of specificity
     m = _TITLE_COUNTY_STATE_RE.match(title)
     if m:
         county = m.group(1).strip()
         state = m.group(2)
     else:
-        # Try independent city pattern: "City Name Tax ..."
-        m = _TITLE_CITY_RE.match(title)
+        m = _TITLE_NO_COUNTY_RE.match(title)
         if m:
             county = m.group(1).strip()
-            state = None
+            state = m.group(2)
         else:
-            return None
+            m = _TITLE_STATE_REPOSITORY_RE.match(title)
+            if m:
+                county = m.group(1).strip()
+                state = m.group(2)
+            else:
+                # Try independent city pattern: "City Name Tax ..."
+                m = _TITLE_CITY_RE.match(title)
+                if m:
+                    county = m.group(1).strip()
+                    state = None
+                else:
+                    return None
 
     # Determine sale type from keywords in the title
     title_lower = title.lower()

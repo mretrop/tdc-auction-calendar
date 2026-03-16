@@ -61,6 +61,16 @@ class TestParseDateRange:
         assert start == date(2026, 3, 30)
         assert end == date(2026, 4, 2)
 
+    def test_cross_month_with_both_months_named(self):
+        start, end = parse_date_range("October", "October 27th - November 13th", 2025)
+        assert start == date(2025, 10, 27)
+        assert end == date(2025, 11, 13)
+
+    def test_cross_month_november_december(self):
+        start, end = parse_date_range("November", "November 26th - December 5th", 2025)
+        assert start == date(2025, 11, 26)
+        assert end == date(2025, 12, 5)
+
     def test_invalid_date_range_returns_none(self):
         result = parse_date_range("August", "Tax Sale Dates to be announced soon for August", 2026)
         assert result is None
@@ -128,6 +138,24 @@ class TestParseTitle:
         )
         assert county == "Wayne"
         assert state == "MI"
+        assert sale_type == SaleType.DEED
+
+    def test_no_county_keyword_with_comma(self):
+        """Grays Harbor, WA (no 'County' word)."""
+        county, state, sale_type = parse_title(
+            "Grays Harbor, WA Tax Foreclosed Properties Auction"
+        )
+        assert county == "Grays Harbor"
+        assert state == "WA"
+        assert sale_type == SaleType.DEED
+
+    def test_state_code_repository_no_comma(self):
+        """Monroe PA Repository (no comma, no 'County')."""
+        county, state, sale_type = parse_title(
+            "Monroe PA Repository"
+        )
+        assert county == "Monroe"
+        assert state == "PA"
         assert sale_type == SaleType.DEED
 
     def test_unparseable_returns_none(self):
