@@ -6,8 +6,8 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from tdc_auction_calendar.collectors.vendors.bid4assets import parse_date_range, parse_title
-from tdc_auction_calendar.models.enums import SaleType
+from tdc_auction_calendar.collectors.vendors.bid4assets import Bid4AssetsCollector, parse_date_range, parse_title
+from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
 
 class TestParseDateRange:
@@ -118,3 +118,71 @@ class TestParseTitle:
     def test_unparseable_returns_none(self):
         result = parse_title("MonroePATaxApr26")
         assert result is None
+
+
+class TestBid4AssetsCollector:
+    @pytest.fixture()
+    def collector(self):
+        return Bid4AssetsCollector()
+
+    def test_name(self, collector):
+        assert collector.name == "bid4assets"
+
+    def test_source_type(self, collector):
+        assert collector.source_type == SourceType.VENDOR
+
+    def test_normalize_standard(self, collector):
+        raw = {
+            "state": "CA",
+            "county": "Riverside",
+            "start_date": date(2026, 4, 23),
+            "end_date": date(2026, 4, 28),
+            "sale_type": SaleType.DEED,
+            "source_url": "https://www.bid4assets.com/storefront/RiversideCountyApr26",
+        }
+        auction = collector.normalize(raw)
+        assert auction.state == "CA"
+        assert auction.county == "Riverside"
+        assert auction.start_date == date(2026, 4, 23)
+        assert auction.end_date == date(2026, 4, 28)
+        assert auction.sale_type == SaleType.DEED
+        assert auction.source_type == SourceType.VENDOR
+        assert auction.vendor == Vendor.BID4ASSETS
+        assert auction.confidence_score == 0.85
+
+    def test_normalize_single_day(self, collector):
+        raw = {
+            "state": "PA",
+            "county": "Monroe",
+            "start_date": date(2026, 4, 8),
+            "end_date": None,
+            "sale_type": SaleType.DEED,
+            "source_url": None,
+        }
+        auction = collector.normalize(raw)
+        assert auction.end_date is None
+        assert auction.source_url == "https://www.bid4assets.com/auctionCalendar"
+
+    def test_normalize_lien(self, collector):
+        raw = {
+            "state": "NJ",
+            "county": "Essex",
+            "start_date": date(2026, 5, 10),
+            "end_date": date(2026, 5, 12),
+            "sale_type": SaleType.LIEN,
+            "source_url": None,
+        }
+        auction = collector.normalize(raw)
+        assert auction.sale_type == SaleType.LIEN
+
+    def test_normalize_missing_state_skipped(self, collector):
+        raw = {
+            "state": None,
+            "county": "Carson City",
+            "start_date": date(2026, 4, 22),
+            "end_date": None,
+            "sale_type": SaleType.DEED,
+            "source_url": None,
+        }
+        with pytest.raises((ValueError, ValidationError)):
+            collector.normalize(raw)

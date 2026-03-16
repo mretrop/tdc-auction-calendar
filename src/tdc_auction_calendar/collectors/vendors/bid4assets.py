@@ -8,7 +8,12 @@ from datetime import date
 
 import structlog
 
-from tdc_auction_calendar.models.enums import SaleType
+from pydantic import ValidationError
+from tdc_auction_calendar.collectors.base import BaseCollector
+from tdc_auction_calendar.collectors.scraping import create_scrape_client, StealthLevel
+from tdc_auction_calendar.collectors.scraping.client import ScrapeError
+from tdc_auction_calendar.models.auction import Auction
+from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
 logger = structlog.get_logger()
 
@@ -134,3 +139,35 @@ def parse_title(title: str) -> tuple[str, str | None, SaleType] | None:
         logger.warning("bid4assets_unknown_sale_type", title=title)
 
     return county, state, sale_type
+
+
+_CALENDAR_URL = "https://www.bid4assets.com/auctionCalendar"
+
+
+class Bid4AssetsCollector(BaseCollector):
+    """Collects tax sale auction dates from the Bid4Assets calendar page."""
+
+    @property
+    def name(self) -> str:
+        return "bid4assets"
+
+    @property
+    def source_type(self) -> SourceType:
+        return SourceType.VENDOR
+
+    def normalize(self, raw: dict) -> Auction:
+        return Auction(
+            state=raw["state"],
+            county=raw["county"],
+            start_date=raw["start_date"],
+            end_date=raw.get("end_date"),
+            sale_type=raw["sale_type"],
+            source_type=SourceType.VENDOR,
+            source_url=raw.get("source_url") or _CALENDAR_URL,
+            confidence_score=0.85,
+            vendor=Vendor.BID4ASSETS,
+        )
+
+    async def _fetch(self) -> list[Auction]:
+        # Placeholder — implemented in Task 5
+        return []
