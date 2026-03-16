@@ -20,6 +20,26 @@
     "priority": "high"
   },
   {
+    "fips_code": "04001",
+    "state": "AZ",
+    "county_name": "Apache",
+    "treasurer_url": null,
+    "tax_sale_page_url": null,
+    "known_auction_vendor": "RealAuction",
+    "timezone": "America/Phoenix",
+    "priority": "medium"
+  },
+  {
+    "fips_code": "04005",
+    "state": "AZ",
+    "county_name": "Coconino",
+    "treasurer_url": null,
+    "tax_sale_page_url": null,
+    "known_auction_vendor": "RealAuction",
+    "timezone": "America/Phoenix",
+    "priority": "medium"
+  },
+  {
     "fips_code": "04013",
     "state": "AZ",
     "county_name": "Maricopa",
@@ -28,6 +48,16 @@
     "known_auction_vendor": null,
     "timezone": "America/Phoenix",
     "priority": "high"
+  },
+  {
+    "fips_code": "04015",
+    "state": "AZ",
+    "county_name": "Mohave",
+    "treasurer_url": null,
+    "tax_sale_page_url": null,
+    "known_auction_vendor": "RealAuction",
+    "timezone": "America/Phoenix",
+    "priority": "medium"
   },
   {
     "fips_code": "04019",
@@ -3250,6 +3280,16 @@
     "priority": "medium"
   },
   {
+    "fips_code": "34099",
+    "state": "NJ",
+    "county_name": "Hardyston",
+    "treasurer_url": null,
+    "tax_sale_page_url": null,
+    "known_auction_vendor": "RealAuction",
+    "timezone": "America/New_York",
+    "priority": "low"
+  },
+  {
     "fips_code": "34017",
     "state": "NJ",
     "county_name": "Hudson",
@@ -3308,6 +3348,16 @@
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "medium"
+  },
+  {
+    "fips_code": "34098",
+    "state": "NJ",
+    "county_name": "Newark",
+    "treasurer_url": null,
+    "tax_sale_page_url": null,
+    "known_auction_vendor": "RealAuction",
+    "timezone": "America/New_York",
+    "priority": "low"
   },
   {
     "fips_code": "34029",
