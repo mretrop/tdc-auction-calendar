@@ -43,11 +43,26 @@ def _mock_crawl_result(html="<h1>Sale</h1>", markdown="# Sale", status_code=200)
     return result
 
 
-async def test_fetch_success():
-    """Successful fetch returns HTML and markdown from crawler."""
-    mock_crawler = AsyncMock()
-    mock_crawler.arun.return_value = _mock_crawl_result()
+@pytest.fixture
+def mock_run_config():
+    """Provide mock CrawlerRunConfig for injected-crawler tests."""
+    mock_config_cls = MagicMock(return_value=MagicMock())
+    mock_configs = MagicMock()
+    mock_configs.CrawlerRunConfig = mock_config_cls
+    with patch.dict("sys.modules", {"crawl4ai.async_configs": mock_configs}):
+        yield mock_config_cls
 
+
+@pytest.fixture
+def mock_crawler(mock_run_config):
+    """Provide a mock AsyncWebCrawler with a default successful result."""
+    crawler = AsyncMock()
+    crawler.arun.return_value = _mock_crawl_result()
+    return crawler
+
+
+async def test_fetch_success(mock_crawler, mock_run_config):
+    """Successful fetch returns HTML and markdown from crawler."""
     fetcher = Crawl4AiFetcher(crawler=mock_crawler)
     result = await fetcher.fetch("https://example.com")
 
@@ -57,11 +72,8 @@ async def test_fetch_success():
     assert result.markdown == "# Sale"
 
 
-async def test_fetch_passes_url_to_crawler():
+async def test_fetch_passes_url_to_crawler(mock_crawler, mock_run_config):
     """The URL is forwarded to the crawler."""
-    mock_crawler = AsyncMock()
-    mock_crawler.arun.return_value = _mock_crawl_result()
-
     fetcher = Crawl4AiFetcher(crawler=mock_crawler)
     await fetcher.fetch("https://county.gov/auction")
 
@@ -70,9 +82,8 @@ async def test_fetch_passes_url_to_crawler():
     assert call_args[0][0] == "https://county.gov/auction" or call_args.kwargs.get("url") == "https://county.gov/auction"
 
 
-async def test_fetch_error_propagates():
+async def test_fetch_error_propagates(mock_crawler, mock_run_config):
     """Crawler errors propagate as exceptions."""
-    mock_crawler = AsyncMock()
     mock_crawler.arun.side_effect = RuntimeError("Browser crashed")
 
     fetcher = Crawl4AiFetcher(crawler=mock_crawler)
@@ -80,9 +91,8 @@ async def test_fetch_error_propagates():
         await fetcher.fetch("https://example.com")
 
 
-async def test_fetch_4xx_raises_permanent_error():
+async def test_fetch_4xx_raises_permanent_error(mock_crawler, mock_run_config):
     """4xx status from crawled page raises PermanentFetchError."""
-    mock_crawler = AsyncMock()
     mock_crawler.arun.return_value = _mock_crawl_result(status_code=403)
 
     fetcher = Crawl4AiFetcher(crawler=mock_crawler)
@@ -92,9 +102,8 @@ async def test_fetch_4xx_raises_permanent_error():
     assert exc_info.value.status_code == 403
 
 
-async def test_fetch_5xx_raises_runtime_error():
+async def test_fetch_5xx_raises_runtime_error(mock_crawler, mock_run_config):
     """5xx status from crawled page raises RuntimeError (retryable)."""
-    mock_crawler = AsyncMock()
     mock_crawler.arun.return_value = _mock_crawl_result(status_code=500)
 
     fetcher = Crawl4AiFetcher(crawler=mock_crawler)
@@ -102,38 +111,32 @@ async def test_fetch_5xx_raises_runtime_error():
         await fetcher.fetch("https://example.com")
 
 
-@pytest.fixture
-def mock_crawler():
-    """Provide a mock AsyncWebCrawler with a default successful result."""
-    crawler = AsyncMock()
-    crawler.arun.return_value = _mock_crawl_result()
-    return crawler
-
-
-async def test_fetch_passes_js_code_and_wait_for(mock_crawler):
-    """Crawl4AI fetcher should pass js_code and wait_for to arun()."""
+async def test_fetch_passes_js_code_and_wait_for(mock_crawler, mock_run_config):
+    """Crawl4AI fetcher passes js_code and wait_for via CrawlerRunConfig."""
     fetcher = Crawl4AiFetcher(crawler=mock_crawler)
     js = "document.querySelector('#search').click();"
     wait = "#results"
 
     await fetcher.fetch("https://example.com", js_code=js, wait_for=wait)
 
-    mock_crawler.arun.assert_called_once()
-    call_kwargs = mock_crawler.arun.call_args
-    assert call_kwargs[0][0] == "https://example.com"
-    assert call_kwargs[1].get("js_code") == js
-    assert call_kwargs[1].get("wait_for") == wait
+    mock_run_config.assert_called_once_with(
+        js_code=js,
+        wait_for=wait,
+        magic=True,
+    )
 
 
-async def test_fetch_omits_js_code_when_none(mock_crawler):
-    """When js_code/wait_for are None, don't pass them to arun()."""
+async def test_fetch_omits_js_code_when_none(mock_crawler, mock_run_config):
+    """When js_code/wait_for are None, CrawlerRunConfig gets None values."""
     fetcher = Crawl4AiFetcher(crawler=mock_crawler)
 
     await fetcher.fetch("https://example.com")
 
-    call_kwargs = mock_crawler.arun.call_args
-    assert "js_code" not in call_kwargs[1]
-    assert "wait_for" not in call_kwargs[1]
+    mock_run_config.assert_called_once_with(
+        js_code=None,
+        wait_for=None,
+        magic=True,
+    )
 
 
 # --- Gap-fill tests: _get_crawler() lazy init ---
@@ -243,9 +246,8 @@ async def test_get_crawler_off_uses_plain_crawler():
 # --- Gap-fill tests: generic exception wrapping ---
 
 
-async def test_fetch_wraps_generic_exception():
+async def test_fetch_wraps_generic_exception(mock_crawler, mock_run_config):
     """Non-OSError/RuntimeError exceptions are wrapped in RuntimeError."""
-    mock_crawler = AsyncMock()
     mock_crawler.arun.side_effect = ValueError("unexpected")
 
     fetcher = Crawl4AiFetcher(crawler=mock_crawler)
@@ -256,9 +258,8 @@ async def test_fetch_wraps_generic_exception():
 # --- Gap-fill tests: missing status_code ---
 
 
-async def test_fetch_missing_status_code_defaults_to_200():
+async def test_fetch_missing_status_code_defaults_to_200(mock_crawler, mock_run_config):
     """Result without status_code attribute defaults to 200."""
-    mock_crawler = AsyncMock()
     result = MagicMock(spec=[])  # empty spec = no attributes
     result.html = "<h1>Sale</h1>"
     result.markdown = "# Sale"
@@ -271,9 +272,8 @@ async def test_fetch_missing_status_code_defaults_to_200():
     assert fetch_result.status_code == 200
 
 
-async def test_fetch_none_status_code_defaults_to_200():
+async def test_fetch_none_status_code_defaults_to_200(mock_crawler, mock_run_config):
     """Result with status_code=None defaults to 200."""
-    mock_crawler = AsyncMock()
     mock_crawler.arun.return_value = _mock_crawl_result(status_code=None)
 
     fetcher = Crawl4AiFetcher(crawler=mock_crawler)
@@ -367,3 +367,73 @@ async def test_get_crawler_undetected_uses_adapter_and_strategy():
         browser_adapter=mock_adapter,
     )
     mock_web_crawler_cls.assert_called_once_with(crawler_strategy=mock_strategy)
+
+
+# --- Tests: CrawlerRunConfig with magic mode ---
+
+
+async def test_fetch_uses_crawler_run_config_with_magic():
+    """STEALTH level passes CrawlerRunConfig(magic=True) to arun()."""
+    mock_run_config = MagicMock()
+    mock_run_config_cls = MagicMock(return_value=mock_run_config)
+
+    mock_browser_config = MagicMock()
+    mock_browser_config_cls = MagicMock(return_value=mock_browser_config)
+
+    mock_crawler_instance = MagicMock()
+    mock_crawler_instance.__aenter__ = AsyncMock(return_value=mock_crawler_instance)
+    mock_crawler_instance.arun = AsyncMock(return_value=_mock_crawl_result())
+    mock_web_crawler_cls = MagicMock(return_value=mock_crawler_instance)
+
+    mock_configs = MagicMock()
+    mock_configs.BrowserConfig = mock_browser_config_cls
+    mock_configs.CrawlerRunConfig = mock_run_config_cls
+
+    mock_crawl4ai = MagicMock()
+    mock_crawl4ai.AsyncWebCrawler = mock_web_crawler_cls
+
+    fetcher = Crawl4AiFetcher(stealth=StealthLevel.STEALTH)
+
+    with patch.dict("sys.modules", {
+        "crawl4ai": mock_crawl4ai,
+        "crawl4ai.async_configs": mock_configs,
+    }):
+        await fetcher.fetch("https://example.com", js_code="click()", wait_for="#results")
+
+    mock_run_config_cls.assert_called_once_with(
+        js_code="click()",
+        wait_for="#results",
+        magic=True,
+    )
+    mock_crawler_instance.arun.assert_called_once_with("https://example.com", config=mock_run_config)
+
+
+async def test_fetch_uses_crawler_run_config_without_magic_when_off():
+    """OFF level passes CrawlerRunConfig(magic=False) to arun()."""
+    mock_run_config = MagicMock()
+    mock_run_config_cls = MagicMock(return_value=mock_run_config)
+
+    mock_configs = MagicMock()
+    mock_configs.CrawlerRunConfig = mock_run_config_cls
+
+    mock_crawler_instance = MagicMock()
+    mock_crawler_instance.__aenter__ = AsyncMock(return_value=mock_crawler_instance)
+    mock_crawler_instance.arun = AsyncMock(return_value=_mock_crawl_result())
+    mock_web_crawler_cls = MagicMock(return_value=mock_crawler_instance)
+
+    mock_crawl4ai = MagicMock()
+    mock_crawl4ai.AsyncWebCrawler = mock_web_crawler_cls
+
+    fetcher = Crawl4AiFetcher(stealth=StealthLevel.OFF)
+
+    with patch.dict("sys.modules", {
+        "crawl4ai": mock_crawl4ai,
+        "crawl4ai.async_configs": mock_configs,
+    }):
+        await fetcher.fetch("https://example.com")
+
+    mock_run_config_cls.assert_called_once_with(
+        js_code=None,
+        wait_for=None,
+        magic=False,
+    )

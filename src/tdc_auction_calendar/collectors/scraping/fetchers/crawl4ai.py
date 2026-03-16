@@ -87,12 +87,14 @@ class Crawl4AiFetcher:
 
         crawler = await self._get_crawler()
         try:
-            kwargs: dict = {}
-            if js_code is not None:
-                kwargs["js_code"] = js_code
-            if wait_for is not None:
-                kwargs["wait_for"] = wait_for
-            result = await crawler.arun(url, **kwargs)
+            from crawl4ai.async_configs import CrawlerRunConfig
+
+            run_config = CrawlerRunConfig(
+                js_code=js_code,
+                wait_for=wait_for,
+                magic=(self._stealth != StealthLevel.OFF),
+            )
+            result = await crawler.arun(url, config=run_config)
         except (OSError, RuntimeError):
             raise
         except Exception as exc:
