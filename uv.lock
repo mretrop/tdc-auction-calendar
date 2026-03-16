@@ -2488,6 +2488,7 @@ source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "anthropic" },
+    { name = "beautifulsoup4" },
     { name = "crawl4ai" },
     { name = "feedgen" },
     { name = "httpx" },
@@ -2512,6 +2513,7 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.13" },
     { name = "anthropic", specifier = ">=0.40" },
+    { name = "beautifulsoup4", specifier = ">=4.12" },
     { name = "crawl4ai", specifier = ">=0.4" },
     { name = "feedgen", specifier = ">=1.0" },
     { name = "httpx", specifier = ">=0.27" },
