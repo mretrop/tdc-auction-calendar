@@ -165,7 +165,7 @@ NJ entries are municipalities, not counties. Use the municipality name in the `c
 Extends `BaseCollector`. Pattern follows MVBA/Arkansas (deterministic parsing, no LLM).
 
 ```
-name = "realauction"
+name = "realauction"  # matches orchestrator key
 source_type = SourceType.VENDOR
 ```
 
