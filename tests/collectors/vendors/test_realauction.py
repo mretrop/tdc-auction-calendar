@@ -195,3 +195,115 @@ def test_normalize_missing_field_raises(collector):
     raw = {"state": "FL", "date": "2026-03-05"}
     with pytest.raises((KeyError, ValueError, ValidationError)):
         collector.normalize(raw)
+
+
+# --- Task 5: _fetch integration tests ---
+
+
+def _mock_scrape_result(html: str | None) -> ScrapeResult:
+    return ScrapeResult(
+        fetch=FetchResult(
+            url="https://example.realtaxdeed.com/index.cfm",
+            status_code=200,
+            fetcher="cloudflare",
+            html=html,
+        ),
+    )
+
+
+async def test_fetch_returns_auctions(collector):
+    html = _load("realauction_hillsborough_march.html")
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(html)
+    mock_client.close = AsyncMock()
+
+    with (
+        patch(
+            "tdc_auction_calendar.collectors.vendors.realauction.create_scrape_client",
+            return_value=mock_client,
+        ),
+        patch(
+            "tdc_auction_calendar.collectors.vendors.realauction.SITES",
+            [("FL", "Hillsborough", "https://hillsborough.realtaxdeed.com")],
+        ),
+    ):
+        auctions = await collector.collect()
+
+    # 4 auctions per month * 3 months = 12 (same fixture), dedup -> 4
+    assert len(auctions) == 4
+    assert all(a.state == "FL" for a in auctions)
+    assert all(a.vendor == Vendor.REALAUCTION for a in auctions)
+
+
+async def test_fetch_empty_html_returns_empty(collector):
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result("")
+    mock_client.close = AsyncMock()
+
+    with (
+        patch(
+            "tdc_auction_calendar.collectors.vendors.realauction.create_scrape_client",
+            return_value=mock_client,
+        ),
+        patch(
+            "tdc_auction_calendar.collectors.vendors.realauction.SITES",
+            [("AZ", "Apache", "https://apache.realtaxdeed.com")],
+        ),
+    ):
+        auctions = await collector.collect()
+
+    assert auctions == []
+
+
+async def test_fetch_partial_failure_continues(collector):
+    html = _load("realauction_hillsborough_march.html")
+
+    async def mock_scrape(url, **kwargs):
+        if "apache" in url:
+            raise ConnectionError("simulated failure")
+        return _mock_scrape_result(html)
+
+    mock_client = AsyncMock()
+    mock_client.scrape = mock_scrape
+    mock_client.close = AsyncMock()
+
+    with (
+        patch(
+            "tdc_auction_calendar.collectors.vendors.realauction.create_scrape_client",
+            return_value=mock_client,
+        ),
+        patch(
+            "tdc_auction_calendar.collectors.vendors.realauction.SITES",
+            [
+                ("AZ", "Apache", "https://apache.realtaxdeed.com"),
+                ("FL", "Hillsborough", "https://hillsborough.realtaxdeed.com"),
+            ],
+        ),
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) == 4
+    assert all(a.state == "FL" for a in auctions)
+
+
+async def test_fetch_mixed_portal_filters_foreclosure(collector):
+    html = _load("realauction_miamidade_mixed.html")
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(html)
+    mock_client.close = AsyncMock()
+
+    with (
+        patch(
+            "tdc_auction_calendar.collectors.vendors.realauction.create_scrape_client",
+            return_value=mock_client,
+        ),
+        patch(
+            "tdc_auction_calendar.collectors.vendors.realauction.SITES",
+            [("FL", "Miami-Dade", "https://miamidade.realforeclose.com")],
+        ),
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) == 1
+    assert auctions[0].county == "Miami-Dade"
+    assert auctions[0].sale_type == SaleType.DEED
