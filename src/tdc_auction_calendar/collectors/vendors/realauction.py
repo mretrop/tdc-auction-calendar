@@ -70,9 +70,12 @@ def parse_calendar_html(html: str) -> list[dict]:
 
 def calendar_url(base_url: str, year: int | None = None, month: int | None = None) -> str:
     """Build a RealAuction calendar page URL."""
+    from urllib.parse import quote
+
     path = "/index.cfm?zaction=user&zmethod=calendar"
     if year is not None and month is not None:
-        path += f"&selCalDate={{ts '{year:04d}-{month:02d}-01 00:00:00'}}"
+        raw_param = f"{{ts '{year:04d}-{month:02d}-01 00:00:00'}}"
+        path += f"&selCalDate={quote(raw_param)}"
     return f"{base_url}{path}"
 
 

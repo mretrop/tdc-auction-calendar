@@ -91,7 +91,7 @@ def test_parse_none_html():
 
 def test_calendar_url_builds_correct_url():
     url = calendar_url("https://hillsborough.realtaxdeed.com", 2026, 4)
-    assert url == "https://hillsborough.realtaxdeed.com/index.cfm?zaction=user&zmethod=calendar&selCalDate={ts '2026-04-01 00:00:00'}"
+    assert url == "https://hillsborough.realtaxdeed.com/index.cfm?zaction=user&zmethod=calendar&selCalDate=%7Bts%20%272026-04-01%2000%3A00%3A00%27%7D"
 
 
 def test_calendar_url_pads_month():
