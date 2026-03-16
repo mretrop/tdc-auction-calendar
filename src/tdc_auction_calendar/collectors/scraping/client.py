@@ -294,6 +294,7 @@ def create_scrape_client(
     rate_limit_default: float | None = None,
     max_retries: int | None = None,
     retry_base_delay: float | None = None,
+    stealth: StealthLevel | None = None,
 ) -> ScrapeClient:
     """Build a ScrapeClient with default config from env vars.
 
@@ -303,8 +304,10 @@ def create_scrape_client(
     """
     from tdc_auction_calendar.collectors.scraping.fetchers.crawl4ai import (
         Crawl4AiFetcher,
+        StealthLevel,
     )
 
+    _stealth = stealth if stealth is not None else StealthLevel.STEALTH
     _cache_dir = cache_dir if cache_dir is not None else os.environ.get("SCRAPE_CACHE_DIR", "data/cache")
     _cache_ttl = cache_ttl if cache_ttl is not None else _env_int("SCRAPE_CACHE_TTL", "21600")
     _rate_default = rate_limit_default if rate_limit_default is not None else _env_float("SCRAPE_RATE_LIMIT_DEFAULT", "2.0")
@@ -323,9 +326,9 @@ def create_scrape_client(
         )
 
         primary = CloudflareFetcher(account_id=cf_account, api_token=cf_token)
-        fallback = Crawl4AiFetcher()
+        fallback = Crawl4AiFetcher(stealth=_stealth)
     else:
-        primary = Crawl4AiFetcher()
+        primary = Crawl4AiFetcher(stealth=_stealth)
         fallback = None
 
     return ScrapeClient(

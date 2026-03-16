@@ -23,6 +23,7 @@ from tdc_auction_calendar.collectors.scraping.extraction import (
     CSSExtraction,
     LLMExtraction,
 )
+from tdc_auction_calendar.collectors.scraping.fetchers.crawl4ai import StealthLevel
 from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
 
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     "PermanentFetchError",
     "ScrapeClient",
     "ScrapeError",
+    "StealthLevel",
     "ScrapeResult",
     "create_scrape_client",
 ]
