@@ -27,12 +27,45 @@ Constructor gains `stealth: StealthLevel = StealthLevel.STEALTH`.
 The lazy `_get_crawler()` method configures crawl4ai based on the level:
 
 - **`OFF`**: Plain `AsyncWebCrawler()` — current behavior.
-- **`STEALTH`** (default): `BrowserConfig(headless=True, enable_stealth=True)` passed to `AsyncWebCrawler`. `CrawlerRunConfig(magic=True)` passed per-request in `arun()`.
-- **`UNDETECTED`**: Same `BrowserConfig` as stealth, plus `UndetectedAdapter` wired through `AsyncPlaywrightCrawlerStrategy` and passed to `AsyncWebCrawler`. `CrawlerRunConfig(magic=True)` also used per-request.
+- **`STEALTH`** (default):
+  ```python
+  browser_config = BrowserConfig(headless=True, enable_stealth=True)
+  crawler = AsyncWebCrawler(config=browser_config)
+  ```
+- **`UNDETECTED`**: Strategy-based construction — `config=` is NOT passed alongside `crawler_strategy=`:
+  ```python
+  browser_config = BrowserConfig(headless=True, enable_stealth=True)
+  strategy = AsyncPlaywrightCrawlerStrategy(
+      browser_config=browser_config,
+      browser_adapter=UndetectedAdapter(),
+  )
+  crawler = AsyncWebCrawler(crawler_strategy=strategy)
+  ```
+
+Logs the stealth level on init: `logger.info("crawl4ai_init", stealth=self._stealth.value)`.
+
+Note: The crawler is created lazily and cached. Changing `stealth` after construction has no effect once `_get_crawler()` has been called.
+
+#### fetch() refactor: CrawlerRunConfig
+
+The current `fetch()` passes `js_code` and `wait_for` as loose kwargs to `arun()`. For `STEALTH` and `UNDETECTED` levels, we need `CrawlerRunConfig(magic=True)` per-request. Since `CrawlerRunConfig` accepts `js_code` and `wait_for` as constructor params, `fetch()` will be refactored to always build a `CrawlerRunConfig`:
+
+```python
+from crawl4ai.async_configs import CrawlerRunConfig
+
+run_config = CrawlerRunConfig(
+    js_code=js_code,        # None if not provided
+    wait_for=wait_for,      # None if not provided
+    magic=(self._stealth != StealthLevel.OFF),
+)
+result = await crawler.arun(url, config=run_config)
+```
+
+This replaces the current loose-kwargs approach for all stealth levels, keeping `fetch()` consistent.
 
 ### create_scrape_client() Changes
 
-New `stealth: str | None = None` parameter. Defaults to `"stealth"` when not provided. Passes through to `Crawl4AiFetcher(stealth=StealthLevel(stealth))`. Both primary and fallback `Crawl4AiFetcher` instances receive the same level.
+New `stealth: StealthLevel = StealthLevel.STEALTH` parameter (typed as the enum, not a raw string). Passes through to `Crawl4AiFetcher(stealth=stealth)`. Both primary and fallback `Crawl4AiFetcher` instances receive the same level. When Cloudflare is primary, the stealth param only affects the fallback `Crawl4AiFetcher`.
 
 `ScrapeClient` itself is unchanged — it receives fetchers without caring about their config.
 
@@ -41,7 +74,9 @@ New `stealth: str | None = None` parameter. Defaults to `"stealth"` when not pro
 Existing collectors get stealth mode for free (default). Collectors targeting bot-protected sites opt into undetected mode:
 
 ```python
-client = create_scrape_client(stealth="undetected")
+from tdc_auction_calendar.collectors.scraping.fetchers.crawl4ai import StealthLevel
+
+client = create_scrape_client(stealth=StealthLevel.UNDETECTED)
 ```
 
 ### Testing
@@ -53,9 +88,32 @@ client = create_scrape_client(stealth="undetected")
 
 ### Files Changed
 
-1. `src/tdc_auction_calendar/collectors/scraping/fetchers/crawl4ai.py` — `StealthLevel` enum, updated constructor and `_get_crawler()`
+1. `src/tdc_auction_calendar/collectors/scraping/fetchers/crawl4ai.py` — `StealthLevel` enum, updated constructor, `_get_crawler()`, and `fetch()` refactor
 2. `src/tdc_auction_calendar/collectors/scraping/client.py` — `stealth` param on `create_scrape_client()`
-3. `tests/scraping/test_crawl4ai.py` — new tests for stealth config wiring
+3. `src/tdc_auction_calendar/collectors/scraping/__init__.py` — re-export `StealthLevel`
+4. `tests/scraping/test_crawl4ai.py` — new tests for stealth config wiring
+
+### Manual Verification
+
+After implementation, verify stealth mode works against a previously-blocked site:
+
+```bash
+uv run python -c "
+import asyncio
+from tdc_auction_calendar.collectors.scraping.fetchers.crawl4ai import Crawl4AiFetcher, StealthLevel
+
+async def test():
+    fetcher = Crawl4AiFetcher(stealth=StealthLevel.UNDETECTED)
+    result = await fetcher.fetch('https://www.realauction.com')
+    print(f'Status: {result.status_code}')
+    print(f'HTML length: {len(result.html or \"\")}')
+    await fetcher.close()
+
+asyncio.run(test())
+"
+```
+
+Expected: 200 status with non-trivial HTML content.
 
 ### Sites This Unblocks
 
