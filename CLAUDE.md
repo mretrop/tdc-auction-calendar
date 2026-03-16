@@ -46,7 +46,7 @@ Collectors use a two-tier fetch+extract architecture built on `ScrapeClient`:
 - **Fallback extraction:** `LLMExtraction` (Claude API tool_use) — used when Crawl4AI is the fetcher (no built-in extraction)
 - **Lightweight extraction:** `CSSExtraction` — available for sources with stable, simple HTML structure
 
-Each collector defines a Pydantic schema and extraction prompt. When Cloudflare is primary, extraction happens in a single round trip. When falling back to Crawl4AI, `LLMExtraction` handles extraction as a separate step.
+Most collectors define a Pydantic schema and extraction prompt. When Cloudflare is primary, extraction happens in a single round trip. When falling back to Crawl4AI, `LLMExtraction` handles extraction as a separate step. Some collectors with stable, structured sources use deterministic regex parsing instead of LLM extraction (e.g., `ArkansasCollector` parses COSL catalog markdown directly).
 
 Key files: `collectors/scraping/client.py` (orchestrator), `collectors/scraping/fetchers/cloudflare.py`, `collectors/scraping/fetchers/crawl4ai.py`, `collectors/scraping/extraction.py`
 
@@ -80,4 +80,4 @@ Key files: `collectors/scraping/client.py` (orchestrator), `collectors/scraping/
 
 ## Progress
 
-Issues are tracked as GitHub issues organized by milestones (M1–M4). Issues #1–10 are complete. Next up: issue #11.
+Issues are tracked as GitHub issues organized by milestones (M1–M5). Check `gh issue list` for current status.
