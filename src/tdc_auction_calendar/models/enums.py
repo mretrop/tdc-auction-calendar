@@ -37,3 +37,4 @@ class Vendor(StrEnum):
     GRANT_STREET = "Grant Street"
     SRI = "SRI"
     PURDUE = "Purdue, Brandon, Fielder, Collins & Mott"
+    MVBA = "McCreary, Veselka, Bragg & Allen"
