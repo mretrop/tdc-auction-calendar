@@ -51,8 +51,17 @@ class Crawl4AiFetcher:
                 browser_config = BrowserConfig(headless=True, enable_stealth=True)
                 crawler = AsyncWebCrawler(config=browser_config)
             else:
-                # UNDETECTED — handled in next task
-                raise NotImplementedError(f"StealthLevel.UNDETECTED not yet implemented")
+                # UNDETECTED — uses UndetectedAdapter for tougher bot protection
+                from crawl4ai import UndetectedAdapter
+                from crawl4ai.async_crawler_strategy import AsyncPlaywrightCrawlerStrategy
+
+                browser_config = BrowserConfig(headless=True, enable_stealth=True)
+                adapter = UndetectedAdapter()
+                strategy = AsyncPlaywrightCrawlerStrategy(
+                    browser_config=browser_config,
+                    browser_adapter=adapter,
+                )
+                crawler = AsyncWebCrawler(crawler_strategy=strategy)
 
             try:
                 await crawler.__aenter__()

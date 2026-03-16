@@ -319,3 +319,51 @@ async def test_close_without_init_is_noop():
     """close() before any fetch is a safe no-op."""
     fetcher = Crawl4AiFetcher()
     await fetcher.close()  # should not raise
+
+
+# --- Tests: UNDETECTED level ---
+
+
+async def test_get_crawler_undetected_uses_adapter_and_strategy():
+    """UNDETECTED level uses UndetectedAdapter + AsyncPlaywrightCrawlerStrategy."""
+    mock_browser_config = MagicMock()
+    mock_browser_config_cls = MagicMock(return_value=mock_browser_config)
+
+    mock_adapter = MagicMock()
+    mock_adapter_cls = MagicMock(return_value=mock_adapter)
+
+    mock_strategy = MagicMock()
+    mock_strategy_cls = MagicMock(return_value=mock_strategy)
+
+    mock_crawler_instance = MagicMock()
+    mock_crawler_instance.__aenter__ = AsyncMock(return_value=mock_crawler_instance)
+    mock_crawler_instance.arun = AsyncMock(return_value=_mock_crawl_result())
+    mock_web_crawler_cls = MagicMock(return_value=mock_crawler_instance)
+
+    mock_configs = MagicMock()
+    mock_configs.BrowserConfig = mock_browser_config_cls
+    mock_configs.CrawlerRunConfig = MagicMock()
+
+    mock_crawl4ai = MagicMock()
+    mock_crawl4ai.AsyncWebCrawler = mock_web_crawler_cls
+    mock_crawl4ai.UndetectedAdapter = mock_adapter_cls
+
+    mock_strategy_module = MagicMock()
+    mock_strategy_module.AsyncPlaywrightCrawlerStrategy = mock_strategy_cls
+
+    fetcher = Crawl4AiFetcher(stealth=StealthLevel.UNDETECTED)
+
+    with patch.dict("sys.modules", {
+        "crawl4ai": mock_crawl4ai,
+        "crawl4ai.async_configs": mock_configs,
+        "crawl4ai.async_crawler_strategy": mock_strategy_module,
+    }):
+        await fetcher.fetch("https://example.com")
+
+    mock_browser_config_cls.assert_called_once_with(headless=True, enable_stealth=True)
+    mock_adapter_cls.assert_called_once_with()
+    mock_strategy_cls.assert_called_once_with(
+        browser_config=mock_browser_config,
+        browser_adapter=mock_adapter,
+    )
+    mock_web_crawler_cls.assert_called_once_with(crawler_strategy=mock_strategy)
