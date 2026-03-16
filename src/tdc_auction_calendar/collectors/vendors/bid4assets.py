@@ -6,13 +6,12 @@ from __future__ import annotations
 import re
 from datetime import date
 
+import httpx
 import structlog
 from bs4 import BeautifulSoup
 
 from pydantic import ValidationError
 from tdc_auction_calendar.collectors.base import BaseCollector
-from tdc_auction_calendar.collectors.scraping import create_scrape_client, StealthLevel
-from tdc_auction_calendar.collectors.scraping.client import ScrapeError
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
@@ -256,45 +255,55 @@ class Bid4AssetsCollector(BaseCollector):
         )
 
     async def _fetch(self) -> list[Auction]:
-        client = create_scrape_client(stealth=StealthLevel.UNDETECTED)
+        # Plain httpx bypasses Akamai (which only blocks headless browsers).
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/131.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+        }
 
         try:
+            async with httpx.AsyncClient(
+                follow_redirects=True, headers=headers, timeout=30.0
+            ) as client:
+                resp = await client.get(_CALENDAR_URL)
+                resp.raise_for_status()
+                html = resp.text
+        except httpx.HTTPError as exc:
+            logger.error("bid4assets_fetch_failed", url=_CALENDAR_URL, error=str(exc))
+            return []
+
+        if not html or "auction-calendar" not in html:
+            logger.warning("bid4assets_empty_or_blocked", url=_CALENDAR_URL, html_length=len(html or ""))
+            return []
+
+        entries = parse_calendar_html(html)
+
+        auctions: list[Auction] = []
+        for entry in entries:
+            if entry.get("state") is None:
+                logger.info(
+                    "bid4assets_skipped_no_state",
+                    county=entry.get("county"),
+                )
+                continue
             try:
-                result = await client.scrape(_CALENDAR_URL)
-            except ScrapeError as exc:
-                logger.error("bid4assets_fetch_failed", url=_CALENDAR_URL, error=str(exc))
-                return []
+                auctions.append(self.normalize(entry))
+            except (KeyError, TypeError, ValueError, ValidationError) as exc:
+                logger.error(
+                    "bid4assets_normalize_failed",
+                    entry=entry,
+                    error=str(exc),
+                )
 
-            html = result.fetch.html or ""
-            if not html:
-                logger.warning("bid4assets_empty_html", url=_CALENDAR_URL)
-                return []
-
-            entries = parse_calendar_html(html)
-
-            auctions: list[Auction] = []
-            for entry in entries:
-                if entry.get("state") is None:
-                    logger.info(
-                        "bid4assets_skipped_no_state",
-                        county=entry.get("county"),
-                    )
-                    continue
-                try:
-                    auctions.append(self.normalize(entry))
-                except (KeyError, TypeError, ValueError, ValidationError) as exc:
-                    logger.error(
-                        "bid4assets_normalize_failed",
-                        entry=entry,
-                        error=str(exc),
-                    )
-
-            logger.info(
-                "bid4assets_fetch_complete",
-                total_entries=len(entries),
-                auctions=len(auctions),
-                skipped=len(entries) - len(auctions),
-            )
-            return auctions
-        finally:
-            await client.close()
+        logger.info(
+            "bid4assets_fetch_complete",
+            total_entries=len(entries),
+            auctions=len(auctions),
+            skipped=len(entries) - len(auctions),
+        )
+        return auctions

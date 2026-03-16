@@ -3,13 +3,12 @@
 
 from datetime import date
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from pydantic import ValidationError
 
-from tdc_auction_calendar.collectors.scraping.client import ScrapeError, ScrapeResult
-from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
 from tdc_auction_calendar.collectors.vendors.bid4assets import (
     Bid4AssetsCollector,
     parse_calendar_html,
@@ -255,31 +254,27 @@ class TestParseCalendarHtml:
         assert "MonroePATaxApr26" not in counties
 
 
-_CALENDAR_URL = "https://www.bid4assets.com/county-tax-sales"
-
-
-def _mock_scrape_result(html: str) -> ScrapeResult:
-    return ScrapeResult(
-        fetch=FetchResult(
-            url=_CALENDAR_URL,
-            status_code=200,
-            fetcher="crawl4ai",
-            html=html,
-        ),
-    )
+def _mock_httpx_response(html: str, status_code: int = 200) -> MagicMock:
+    resp = MagicMock(spec=httpx.Response)
+    resp.status_code = status_code
+    resp.text = html
+    resp.raise_for_status = MagicMock()
+    if status_code >= 400:
+        resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "error", request=MagicMock(), response=resp
+        )
+    return resp
 
 
 async def test_fetch_returns_auctions():
     html = _load("bid4assets_calendar.html")
     mock_client = AsyncMock()
-    mock_client.scrape.return_value = _mock_scrape_result(html)
-    mock_client.close = AsyncMock()
+    mock_client.get.return_value = _mock_httpx_response(html)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
 
     collector = Bid4AssetsCollector()
-    with patch(
-        "tdc_auction_calendar.collectors.vendors.bid4assets.create_scrape_client",
-        return_value=mock_client,
-    ):
+    with patch("tdc_auction_calendar.collectors.vendors.bid4assets.httpx.AsyncClient", return_value=mock_client):
         auctions = await collector.collect()
 
     assert len(auctions) > 0
@@ -289,31 +284,25 @@ async def test_fetch_returns_auctions():
 
 async def test_fetch_empty_html_returns_empty():
     mock_client = AsyncMock()
-    mock_client.scrape.return_value = _mock_scrape_result("")
-    mock_client.close = AsyncMock()
+    mock_client.get.return_value = _mock_httpx_response("")
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
 
     collector = Bid4AssetsCollector()
-    with patch(
-        "tdc_auction_calendar.collectors.vendors.bid4assets.create_scrape_client",
-        return_value=mock_client,
-    ):
+    with patch("tdc_auction_calendar.collectors.vendors.bid4assets.httpx.AsyncClient", return_value=mock_client):
         auctions = await collector.collect()
 
     assert auctions == []
 
 
-async def test_fetch_scrape_error_returns_empty():
+async def test_fetch_http_error_returns_empty():
     mock_client = AsyncMock()
-    mock_client.scrape.side_effect = ScrapeError(
-        url=_CALENDAR_URL, attempts=[{"error": "blocked"}]
-    )
-    mock_client.close = AsyncMock()
+    mock_client.get.return_value = _mock_httpx_response("blocked", status_code=403)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
 
     collector = Bid4AssetsCollector()
-    with patch(
-        "tdc_auction_calendar.collectors.vendors.bid4assets.create_scrape_client",
-        return_value=mock_client,
-    ):
+    with patch("tdc_auction_calendar.collectors.vendors.bid4assets.httpx.AsyncClient", return_value=mock_client):
         auctions = await collector.collect()
 
     assert auctions == []
@@ -322,14 +311,12 @@ async def test_fetch_scrape_error_returns_empty():
 async def test_fetch_filters_none_state_entries():
     html = _load("bid4assets_calendar.html")
     mock_client = AsyncMock()
-    mock_client.scrape.return_value = _mock_scrape_result(html)
-    mock_client.close = AsyncMock()
+    mock_client.get.return_value = _mock_httpx_response(html)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
 
     collector = Bid4AssetsCollector()
-    with patch(
-        "tdc_auction_calendar.collectors.vendors.bid4assets.create_scrape_client",
-        return_value=mock_client,
-    ):
+    with patch("tdc_auction_calendar.collectors.vendors.bid4assets.httpx.AsyncClient", return_value=mock_client):
         auctions = await collector.collect()
 
     assert all(a.state is not None for a in auctions)
