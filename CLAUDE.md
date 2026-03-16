@@ -41,12 +41,14 @@ uv run alembic revision --autogenerate -m "description"  # Generate new migratio
 Collectors use a two-tier fetch+extract architecture built on `ScrapeClient`:
 
 - **Primary fetcher:** Cloudflare Browser Rendering `/crawl` endpoint (when `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` are set)
-- **Fallback fetcher:** Crawl4AI (local headless browser)
+- **Fallback fetcher:** Crawl4AI (local headless browser, stealth mode enabled by default)
 - **Primary extraction:** Cloudflare's built-in JSON extraction via `jsonOptions` (prompt + `response_format` schema) — server-side, no separate API call
 - **Fallback extraction:** `LLMExtraction` (Claude API tool_use) — used when Crawl4AI is the fetcher (no built-in extraction)
 - **Lightweight extraction:** `CSSExtraction` — available for sources with stable, simple HTML structure
 
 Most collectors define a Pydantic schema and extraction prompt. When Cloudflare is primary, extraction happens in a single round trip. When falling back to Crawl4AI, `LLMExtraction` handles extraction as a separate step. Some collectors with stable, structured sources use deterministic regex parsing instead of LLM extraction (e.g., `ArkansasCollector`, `MVBACollector`).
+
+Crawl4AI supports three stealth levels via `StealthLevel` enum: `OFF` (plain browser), `STEALTH` (default — `playwright-stealth` + `magic` mode), `UNDETECTED` (opt-in — adds `UndetectedAdapter` for Akamai-level protection). Collectors targeting bot-protected sites use `create_scrape_client(stealth=StealthLevel.UNDETECTED)`.
 
 Key files: `collectors/scraping/client.py` (orchestrator), `collectors/scraping/fetchers/cloudflare.py`, `collectors/scraping/fetchers/crawl4ai.py`, `collectors/scraping/extraction.py`
 
