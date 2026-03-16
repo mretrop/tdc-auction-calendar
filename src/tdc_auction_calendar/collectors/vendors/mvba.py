@@ -6,6 +6,7 @@ import re
 from datetime import date, datetime
 
 import structlog
+from pydantic import ValidationError
 
 from tdc_auction_calendar.collectors.base import BaseCollector
 from tdc_auction_calendar.collectors.scraping import create_scrape_client
@@ -45,7 +46,14 @@ def parse_monthly_sales(markdown: str) -> list[tuple[date, str]]:
 
     for i, heading in enumerate(headings):
         month_str, day_str, year_str = heading.group(1), heading.group(2), heading.group(3)
-        sale_date = datetime.strptime(f"{month_str} {day_str} {year_str}", "%B %d %Y").date()
+        try:
+            sale_date = datetime.strptime(f"{month_str} {day_str} {year_str}", "%B %d %Y").date()
+        except ValueError:
+            logger.error(
+                "mvba_invalid_heading_date",
+                raw_date=f"{month_str} {day_str} {year_str}",
+            )
+            continue
 
         # Extract counties between this heading and the next (or end of string)
         start = heading.end()
@@ -80,14 +88,28 @@ class MVBACollector(BaseCollector):
         markdown = result.fetch.markdown or ""
         entries = parse_monthly_sales(markdown)
 
-        if not entries:
-            logger.warning("mvba_no_entries_found", url=_SOURCE_URL)
-            return []
+        if markdown and not entries:
+            logger.warning(
+                "no_records_parsed",
+                collector=self.name,
+                url=_SOURCE_URL,
+                markdown_length=len(markdown),
+            )
 
-        return [
-            self.normalize({"county": county, "date": sale_date.isoformat()})
-            for sale_date, county in entries
-        ]
+        auctions: list[Auction] = []
+        for sale_date, county in entries:
+            raw = {"county": county, "date": sale_date.isoformat()}
+            try:
+                auctions.append(self.normalize(raw))
+            except (KeyError, TypeError, ValueError, ValidationError) as exc:
+                logger.error(
+                    "normalize_failed",
+                    collector=self.name,
+                    raw=raw,
+                    error=str(exc),
+                )
+
+        return auctions
 
     def normalize(self, raw: dict) -> Auction:
         return Auction(

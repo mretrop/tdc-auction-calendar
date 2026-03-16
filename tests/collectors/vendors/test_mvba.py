@@ -1,10 +1,13 @@
 """Tests for MVBA Law vendor collector."""
 
 from datetime import date
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic import ValidationError
 
+from tdc_auction_calendar.collectors.scraping.client import ScrapeResult
+from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
 from tdc_auction_calendar.collectors.vendors.mvba import (
     MVBACollector,
     parse_monthly_sales,
@@ -115,3 +118,95 @@ def test_normalize_missing_county_raises(collector):
     raw = {"date": "2026-04-07"}
     with pytest.raises((KeyError, ValueError, ValidationError)):
         collector.normalize(raw)
+
+
+def test_normalize_invalid_date_raises(collector):
+    raw = {"county": "Eastland", "date": "not-a-date"}
+    with pytest.raises((ValidationError, ValueError)):
+        collector.normalize(raw)
+
+
+def test_parse_heading_with_no_counties():
+    """A heading section with no county links should produce no results."""
+    md = """\
+## April Tax Sales (Tuesday, April 7, 2026)
+
+No counties listed here.
+"""
+    results = parse_monthly_sales(md)
+    assert results == []
+
+
+def test_parse_invalid_date_skips_section():
+    """An invalid date in a heading should skip that section, not crash."""
+    md = """\
+## April Tax Sales (Tuesday, April 32, 2026)
+
+* [Eastland County](https://example.com/eastland.pdf)
+
+## May Tax Sales (Wednesday, May 6, 2026)
+
+* [Travis County](https://example.com/travis.pdf)
+"""
+    results = parse_monthly_sales(md)
+    assert len(results) == 1
+    assert results[0] == (date(2026, 5, 6), "Travis")
+
+
+# ── _fetch integration tests ─────────────────────────────────────────
+
+
+def _mock_scrape_result(markdown: str | None) -> ScrapeResult:
+    return ScrapeResult(
+        fetch=FetchResult(
+            url="https://mvbalaw.com/tax-sales/month-sales/",
+            status_code=200,
+            fetcher="cloudflare",
+            markdown=markdown,
+        ),
+    )
+
+
+async def test_fetch_returns_auctions(collector):
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(SAMPLE_MARKDOWN)
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.vendors.mvba.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) == 4
+    assert all(a.state == "TX" for a in auctions)
+    assert all(a.source_type == SourceType.VENDOR for a in auctions)
+    assert all(a.vendor == Vendor.MVBA for a in auctions)
+
+
+async def test_fetch_empty_markdown_returns_empty(collector):
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result("")
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.vendors.mvba.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert auctions == []
+
+
+async def test_fetch_none_markdown_returns_empty(collector):
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(None)
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.vendors.mvba.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert auctions == []
