@@ -2,12 +2,28 @@
 """Tests for Bid4Assets vendor collector."""
 
 from datetime import date
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic import ValidationError
 
-from tdc_auction_calendar.collectors.vendors.bid4assets import Bid4AssetsCollector, parse_date_range, parse_title
+from tdc_auction_calendar.collectors.scraping.client import ScrapeError, ScrapeResult
+from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
+from tdc_auction_calendar.collectors.vendors.bid4assets import (
+    Bid4AssetsCollector,
+    parse_calendar_html,
+    parse_date_range,
+    parse_title,
+)
 from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
+
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _load(name: str) -> str:
+    return (FIXTURES / name).read_text()
 
 
 class TestParseDateRange:
@@ -161,7 +177,7 @@ class TestBid4AssetsCollector:
         }
         auction = collector.normalize(raw)
         assert auction.end_date is None
-        assert auction.source_url == "https://www.bid4assets.com/auctionCalendar"
+        assert auction.source_url == "https://www.bid4assets.com/county-tax-sales"
 
     def test_normalize_lien(self, collector):
         raw = {
@@ -186,3 +202,135 @@ class TestBid4AssetsCollector:
         }
         with pytest.raises((ValueError, ValidationError)):
             collector.normalize(raw)
+
+
+class TestParseCalendarHtml:
+    def test_extracts_auctions_from_fixture(self):
+        html = _load("bid4assets_calendar.html")
+        results = parse_calendar_html(html)
+        # March: Alameda CA, Mason WA = 2
+        # April: MonroePATaxApr26 (unparseable, skip), Elko NV, Carson City (state=None), Riverside CA = 3
+        # May: Nye NV, Klickitat WA x2, Monroe PA = 4
+        # June: Santa Cruz CA = 1
+        # August: "to be announced" = 0
+        assert len(results) == 10
+
+    def test_auction_entry_has_required_fields(self):
+        html = _load("bid4assets_calendar.html")
+        results = parse_calendar_html(html)
+        entry = results[0]
+        assert "county" in entry
+        assert "state" in entry
+        assert "start_date" in entry
+        assert "sale_type" in entry
+
+    def test_skips_announced_entries(self):
+        html = _load("bid4assets_calendar.html")
+        results = parse_calendar_html(html)
+        for r in results:
+            assert r["start_date"] is not None
+
+    def test_empty_html(self):
+        results = parse_calendar_html("")
+        assert results == []
+
+    def test_captures_source_url(self):
+        html = _load("bid4assets_calendar.html")
+        results = parse_calendar_html(html)
+        linked = [r for r in results if r.get("source_url")]
+        assert len(linked) >= 1
+
+    def test_uses_data_year_attribute(self):
+        html = _load("bid4assets_calendar.html")
+        results = parse_calendar_html(html)
+        # All entries should be in 2026 (from data-year attribute)
+        for r in results:
+            assert r["start_date"].year == 2026
+
+    def test_skips_unparseable_titles(self):
+        """MonroePATaxApr26 slug should be skipped."""
+        html = _load("bid4assets_calendar.html")
+        results = parse_calendar_html(html)
+        counties = [r["county"] for r in results]
+        assert "MonroePATaxApr26" not in counties
+
+
+_CALENDAR_URL = "https://www.bid4assets.com/county-tax-sales"
+
+
+def _mock_scrape_result(html: str) -> ScrapeResult:
+    return ScrapeResult(
+        fetch=FetchResult(
+            url=_CALENDAR_URL,
+            status_code=200,
+            fetcher="crawl4ai",
+            html=html,
+        ),
+    )
+
+
+async def test_fetch_returns_auctions():
+    html = _load("bid4assets_calendar.html")
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(html)
+    mock_client.close = AsyncMock()
+
+    collector = Bid4AssetsCollector()
+    with patch(
+        "tdc_auction_calendar.collectors.vendors.bid4assets.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) > 0
+    assert all(a.vendor == Vendor.BID4ASSETS for a in auctions)
+    assert all(a.source_type == SourceType.VENDOR for a in auctions)
+
+
+async def test_fetch_empty_html_returns_empty():
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result("")
+    mock_client.close = AsyncMock()
+
+    collector = Bid4AssetsCollector()
+    with patch(
+        "tdc_auction_calendar.collectors.vendors.bid4assets.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert auctions == []
+
+
+async def test_fetch_scrape_error_returns_empty():
+    mock_client = AsyncMock()
+    mock_client.scrape.side_effect = ScrapeError(
+        url=_CALENDAR_URL, attempts=[{"error": "blocked"}]
+    )
+    mock_client.close = AsyncMock()
+
+    collector = Bid4AssetsCollector()
+    with patch(
+        "tdc_auction_calendar.collectors.vendors.bid4assets.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert auctions == []
+
+
+async def test_fetch_filters_none_state_entries():
+    html = _load("bid4assets_calendar.html")
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(html)
+    mock_client.close = AsyncMock()
+
+    collector = Bid4AssetsCollector()
+    with patch(
+        "tdc_auction_calendar.collectors.vendors.bid4assets.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    assert all(a.state is not None for a in auctions)
+    assert all(len(a.state) == 2 for a in auctions)

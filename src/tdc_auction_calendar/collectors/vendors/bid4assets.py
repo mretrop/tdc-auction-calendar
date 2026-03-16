@@ -7,6 +7,7 @@ import re
 from datetime import date
 
 import structlog
+from bs4 import BeautifulSoup
 
 from pydantic import ValidationError
 from tdc_auction_calendar.collectors.base import BaseCollector
@@ -141,7 +142,93 @@ def parse_title(title: str) -> tuple[str, str | None, SaleType] | None:
     return county, state, sale_type
 
 
-_CALENDAR_URL = "https://www.bid4assets.com/auctionCalendar"
+def parse_calendar_html(html: str) -> list[dict]:
+    """Parse the Bid4Assets auction calendar HTML into auction dicts.
+
+    Returns list of dicts with keys: county, state, start_date, end_date,
+    sale_type, source_url.
+    """
+    if not html:
+        return []
+
+    soup = BeautifulSoup(html, "html.parser")
+    results: list[dict] = []
+
+    for month_div in soup.select("div.month"):
+        # Get year from data-year attribute
+        year_str = month_div.get("data-year")
+        if year_str is None:
+            continue
+        try:
+            year = int(year_str)
+        except ValueError:
+            continue
+
+        # Get month name from header
+        header = month_div.select_one("div.title h3")
+        if header is None:
+            continue
+        month_name = header.get_text().strip()
+
+        # Process each auction entry
+        for li in month_div.select("ul.auction-list li"):
+            # Get title from <a> or <strong>
+            link_el = li.select_one("a[href]")
+            strong_el = li.select_one("strong")
+
+            if link_el is not None:
+                title_text = link_el.get_text().strip()
+            elif strong_el is not None:
+                title_text = strong_el.get_text().strip()
+            else:
+                # No title element — likely "to be announced" text
+                continue
+
+            # Parse title
+            parsed = parse_title(title_text)
+            if parsed is None:
+                logger.warning("bid4assets_unparseable_title", title=title_text)
+                continue
+            county, state, sale_type = parsed
+
+            # Get date range from <span>
+            span_el = li.select_one("span")
+            if span_el is None:
+                continue
+            date_text = span_el.get_text().strip()
+
+            # Parse date range
+            date_result = parse_date_range(month_name, date_text, year)
+            if date_result is None:
+                logger.info(
+                    "bid4assets_skipped_entry",
+                    title=title_text,
+                    date_text=date_text,
+                )
+                continue
+            start_date, end_date = date_result
+
+            # Get storefront link if present
+            source_url = None
+            if link_el is not None and link_el.get("href"):
+                href = link_el["href"]
+                if not href.startswith("http"):
+                    href = f"https://www.bid4assets.com{href}"
+                source_url = href
+
+            results.append({
+                "county": county,
+                "state": state,
+                "start_date": start_date,
+                "end_date": end_date,
+                "sale_type": sale_type,
+                "source_url": source_url,
+            })
+
+    return results
+
+
+_CALENDAR_URL = "https://www.bid4assets.com/county-tax-sales"
 
 
 class Bid4AssetsCollector(BaseCollector):
@@ -169,5 +256,45 @@ class Bid4AssetsCollector(BaseCollector):
         )
 
     async def _fetch(self) -> list[Auction]:
-        # Placeholder — implemented in Task 5
-        return []
+        client = create_scrape_client(stealth=StealthLevel.UNDETECTED)
+
+        try:
+            try:
+                result = await client.scrape(_CALENDAR_URL)
+            except ScrapeError as exc:
+                logger.error("bid4assets_fetch_failed", url=_CALENDAR_URL, error=str(exc))
+                return []
+
+            html = result.fetch.html or ""
+            if not html:
+                logger.warning("bid4assets_empty_html", url=_CALENDAR_URL)
+                return []
+
+            entries = parse_calendar_html(html)
+
+            auctions: list[Auction] = []
+            for entry in entries:
+                if entry.get("state") is None:
+                    logger.info(
+                        "bid4assets_skipped_no_state",
+                        county=entry.get("county"),
+                    )
+                    continue
+                try:
+                    auctions.append(self.normalize(entry))
+                except (KeyError, TypeError, ValueError, ValidationError) as exc:
+                    logger.error(
+                        "bid4assets_normalize_failed",
+                        entry=entry,
+                        error=str(exc),
+                    )
+
+            logger.info(
+                "bid4assets_fetch_complete",
+                total_entries=len(entries),
+                auctions=len(auctions),
+                skipped=len(entries) - len(auctions),
+            )
+            return auctions
+        finally:
+            await client.close()
