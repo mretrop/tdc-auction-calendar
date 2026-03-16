@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from tdc_auction_calendar.collectors.base import BaseCollector
 from tdc_auction_calendar.collectors.scraping import create_scrape_client, StealthLevel
+from tdc_auction_calendar.collectors.scraping.client import ScrapeError
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
@@ -50,10 +51,14 @@ def parse_calendar_html(html: str) -> list[dict]:
         try:
             auction_date = datetime.strptime(label, "%B-%d-%Y").date()
         except ValueError:
+            logger.warning("realauction_date_parse_failed", aria_label=label)
             continue
 
         calsch = cell.select_one(".CALSCH")
-        property_count = int(calsch.get_text()) if calsch else 0
+        try:
+            property_count = int(calsch.get_text()) if calsch else 0
+        except ValueError:
+            property_count = 0
 
         caltime = cell.select_one(".CALTIME")
         auction_time = caltime.get_text().strip() if caltime else ""
@@ -141,9 +146,9 @@ SITES: list[tuple[str, str, str]] = [
     ("FL", "Okeechobee", "https://okeechobee.realforeclose.com"),
     ("FL", "St. Lucie", "https://stlucie.realforeclose.com"),
     ("FL", "Walton", "https://walton.realforeclose.com"),
-    # New Jersey
-    ("NJ", "Hardyston", "https://hardystonnj.realforeclose.com"),
-    ("NJ", "Newark", "https://newarknj.realforeclose.com"),
+    # New Jersey (municipality portals mapped to parent counties)
+    ("NJ", "Sussex", "https://hardystonnj.realforeclose.com"),
+    ("NJ", "Essex", "https://newarknj.realforeclose.com"),
 ]
 
 
@@ -168,8 +173,8 @@ class RealAuctionCollector(BaseCollector):
             async with semaphore:
                 try:
                     result = await client.scrape(url)
-                except Exception as exc:
-                    logger.warning(
+                except ScrapeError as exc:
+                    logger.error(
                         "realauction_fetch_failed",
                         state=state,
                         county=county,
@@ -180,6 +185,12 @@ class RealAuctionCollector(BaseCollector):
 
                 html = result.fetch.html or ""
                 if not html:
+                    logger.warning(
+                        "realauction_empty_html",
+                        state=state,
+                        county=county,
+                        url=url,
+                    )
                     return []
 
                 entries = parse_calendar_html(html)
@@ -218,6 +229,7 @@ class RealAuctionCollector(BaseCollector):
                     year += 1
                 tasks.append(_fetch_one(state, county, base_url, calendar_url(base_url, year, month)))
 
+        results: list[list[Auction]] = []
         try:
             results = await asyncio.gather(*tasks)
         finally:
@@ -227,10 +239,13 @@ class RealAuctionCollector(BaseCollector):
         for batch in results:
             all_auctions.extend(batch)
 
+        failed_tasks = sum(1 for b in results if not b)
         logger.info(
             "realauction_fetch_complete",
             sites=len(SITES),
             months=_MONTHS_AHEAD + 1,
+            total_tasks=len(tasks),
+            failed_tasks=failed_tasks,
             auctions=len(all_auctions),
         )
         return all_auctions

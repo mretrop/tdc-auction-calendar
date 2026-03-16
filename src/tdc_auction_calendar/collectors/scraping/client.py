@@ -6,7 +6,7 @@ import asyncio
 import os
 import random
 from types import TracebackType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import httpx

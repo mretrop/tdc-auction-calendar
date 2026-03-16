@@ -3280,16 +3280,6 @@
     "priority": "medium"
   },
   {
-    "fips_code": "34099",
-    "state": "NJ",
-    "county_name": "Hardyston",
-    "treasurer_url": null,
-    "tax_sale_page_url": null,
-    "known_auction_vendor": "RealAuction",
-    "timezone": "America/New_York",
-    "priority": "low"
-  },
-  {
     "fips_code": "34017",
     "state": "NJ",
     "county_name": "Hudson",
@@ -3348,16 +3338,6 @@
     "known_auction_vendor": null,
     "timezone": "America/New_York",
     "priority": "medium"
-  },
-  {
-    "fips_code": "34098",
-    "state": "NJ",
-    "county_name": "Newark",
-    "treasurer_url": null,
-    "tax_sale_page_url": null,
-    "known_auction_vendor": "RealAuction",
-    "timezone": "America/New_York",
-    "priority": "low"
   },
   {
     "fips_code": "34029",

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from pydantic import ValidationError
 
-from tdc_auction_calendar.collectors.scraping.client import ScrapeResult
+from tdc_auction_calendar.collectors.scraping.client import ScrapeError, ScrapeResult
 from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
 from tdc_auction_calendar.collectors.vendors.realauction import (
     SITES,
@@ -87,6 +87,19 @@ def test_parse_treasurer_deed():
 def test_parse_none_html():
     results = parse_calendar_html("")
     assert results == []
+
+
+def test_parse_skips_malformed_date():
+    html = '<div class="CALBOX CALW5 CALSELT" role="link" aria-label="03/19/2026" dayid="03/19/2026"><span class="CALNUM">19</span> <span class="CALTEXT">Tax Deed<br><span class="CALMSG"><span class="CALACT">0</span> / <span class="CALSCH">10</span> TD<br> </span><span class="CALTIME"> 10:00 AM ET</span></span></div>'
+    results = parse_calendar_html(html)
+    assert results == []
+
+
+def test_parse_non_numeric_property_count():
+    html = '<div class="CALBOX CALW5 CALSELT" role="link" aria-label="April-10-2026" dayid="04/10/2026"><span class="CALNUM">10</span> <span class="CALTEXT">Tax Deed<br><span class="CALMSG"><span class="CALACT">0</span> / <span class="CALSCH">N/A</span> TD<br> </span><span class="CALTIME"> 10:00 AM ET</span></span></div>'
+    results = parse_calendar_html(html)
+    assert len(results) == 1
+    assert results[0]["property_count"] == 0
 
 
 def test_calendar_url_builds_correct_url():
@@ -257,7 +270,7 @@ async def test_fetch_partial_failure_continues(collector):
 
     async def mock_scrape(url, **kwargs):
         if "apache" in url:
-            raise ConnectionError("simulated failure")
+            raise ScrapeError(url=url, attempts=[{"error": "simulated failure"}])
         return _mock_scrape_result(html)
 
     mock_client = AsyncMock()
