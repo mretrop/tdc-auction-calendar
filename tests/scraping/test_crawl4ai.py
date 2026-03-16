@@ -5,7 +5,32 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tdc_auction_calendar.collectors.scraping.client import PermanentFetchError
-from tdc_auction_calendar.collectors.scraping.fetchers.crawl4ai import Crawl4AiFetcher
+from tdc_auction_calendar.collectors.scraping.fetchers.crawl4ai import (
+    Crawl4AiFetcher,
+    StealthLevel,
+)
+
+
+def test_stealth_level_values():
+    """StealthLevel enum has expected string values."""
+    assert StealthLevel.OFF == "off"
+    assert StealthLevel.STEALTH == "stealth"
+    assert StealthLevel.UNDETECTED == "undetected"
+
+
+async def test_default_stealth_is_stealth():
+    """Crawl4AiFetcher defaults to STEALTH level."""
+    fetcher = Crawl4AiFetcher()
+    assert fetcher._stealth == StealthLevel.STEALTH
+
+
+async def test_constructor_accepts_stealth_level():
+    """Crawl4AiFetcher accepts explicit stealth level."""
+    fetcher = Crawl4AiFetcher(stealth=StealthLevel.OFF)
+    assert fetcher._stealth == StealthLevel.OFF
+
+    fetcher2 = Crawl4AiFetcher(stealth=StealthLevel.UNDETECTED)
+    assert fetcher2._stealth == StealthLevel.UNDETECTED
 
 
 def _mock_crawl_result(html="<h1>Sale</h1>", markdown="# Sale", status_code=200):

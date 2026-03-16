@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Any
 
 import structlog
@@ -12,12 +13,25 @@ from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResu
 logger = structlog.get_logger()
 
 
+class StealthLevel(StrEnum):
+    """Controls anti-bot evasion level for the Crawl4AI browser."""
+
+    OFF = "off"
+    STEALTH = "stealth"
+    UNDETECTED = "undetected"
+
+
 class Crawl4AiFetcher:
     """Fetches pages via Crawl4AI's AsyncWebCrawler."""
 
-    def __init__(self, crawler: Any = None) -> None:
+    def __init__(
+        self,
+        crawler: Any = None,
+        stealth: StealthLevel = StealthLevel.STEALTH,
+    ) -> None:
         self._crawler = crawler
         self._owns_crawler = crawler is None
+        self._stealth = stealth
 
     async def _get_crawler(self) -> Any:
         if self._crawler is None:
