@@ -77,3 +77,60 @@ def parse_date_range(
             return None
 
     return start_date, end_date
+
+
+# Matches: "County Name, ST ..."
+_TITLE_COUNTY_STATE_RE = re.compile(
+    r"^(.+?)\s+County,\s*([A-Z]{2})\s+"
+)
+# Matches: "City Name Tax ..." (no comma/state — independent cities)
+_TITLE_CITY_RE = re.compile(
+    r"^(.+?)\s+Tax\s+"
+)
+
+_SALE_TYPE_MAP: dict[str, SaleType] = {
+    "tax defaulted": SaleType.DEED,
+    "tax foreclosed": SaleType.DEED,
+    "tax title/surplus": SaleType.DEED,
+    "tax title": SaleType.DEED,
+    "repository": SaleType.DEED,
+    "tax lien": SaleType.LIEN,
+}
+
+
+def parse_title(title: str) -> tuple[str, str | None, SaleType] | None:
+    """Parse county, state, and sale type from an auction title.
+
+    Returns:
+        (county, state, sale_type) tuple, or None if unparseable.
+        state may be None for independent cities.
+    """
+    title = title.strip()
+
+    # Try "County Name, ST ..." pattern first
+    m = _TITLE_COUNTY_STATE_RE.match(title)
+    if m:
+        county = m.group(1).strip()
+        state = m.group(2)
+    else:
+        # Try independent city pattern: "City Name Tax ..."
+        m = _TITLE_CITY_RE.match(title)
+        if m:
+            county = m.group(1).strip()
+            state = None
+        else:
+            return None
+
+    # Determine sale type from keywords in the title
+    title_lower = title.lower()
+    sale_type = SaleType.DEED  # default
+    matched = False
+    for keyword, st in _SALE_TYPE_MAP.items():
+        if keyword in title_lower:
+            sale_type = st
+            matched = True
+            break
+    if not matched:
+        logger.warning("bid4assets_unknown_sale_type", title=title)
+
+    return county, state, sale_type

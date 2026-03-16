@@ -6,7 +6,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from tdc_auction_calendar.collectors.vendors.bid4assets import parse_date_range
+from tdc_auction_calendar.collectors.vendors.bid4assets import parse_date_range, parse_title
 from tdc_auction_calendar.models.enums import SaleType
 
 
@@ -48,4 +48,73 @@ class TestParseDateRange:
 
     def test_invalid_date_range_returns_none(self):
         result = parse_date_range("August", "Tax Sale Dates to be announced soon for August", 2026)
+        assert result is None
+
+
+class TestParseTitle:
+    def test_standard_county(self):
+        county, state, sale_type = parse_title(
+            "Riverside County, CA Tax Defaulted Properties Auction"
+        )
+        assert county == "Riverside"
+        assert state == "CA"
+        assert sale_type == SaleType.DEED
+
+    def test_tax_foreclosed(self):
+        county, state, sale_type = parse_title(
+            "Klickitat County, WA Tax Foreclosed Properties Auction"
+        )
+        assert county == "Klickitat"
+        assert state == "WA"
+        assert sale_type == SaleType.DEED
+
+    def test_tax_title_surplus(self):
+        county, state, sale_type = parse_title(
+            "Klickitat County, WA Tax Title/Surplus Properties Auction"
+        )
+        assert county == "Klickitat"
+        assert state == "WA"
+        assert sale_type == SaleType.DEED
+
+    def test_repository(self):
+        county, state, sale_type = parse_title(
+            "Monroe County, PA Repository May26"
+        )
+        assert county == "Monroe"
+        assert state == "PA"
+        assert sale_type == SaleType.DEED
+
+    def test_tax_lien(self):
+        county, state, sale_type = parse_title(
+            "Essex County, NJ Tax Lien Certificate Sale"
+        )
+        assert county == "Essex"
+        assert state == "NJ"
+        assert sale_type == SaleType.LIEN
+
+    def test_independent_city(self):
+        county, state, sale_type = parse_title(
+            "Carson City Tax Defaulted Properties Auctions"
+        )
+        assert county == "Carson City"
+        assert state is None
+        assert sale_type == SaleType.DEED
+
+    def test_no_county_with_state(self):
+        county, state, sale_type = parse_title(
+            "Nye County, NV Tax Defaulted Properties Auction"
+        )
+        assert county == "Nye"
+        assert state == "NV"
+
+    def test_unknown_sale_type_defaults_to_deed(self):
+        county, state, sale_type = parse_title(
+            "Wayne County, MI Special Properties Auction"
+        )
+        assert county == "Wayne"
+        assert state == "MI"
+        assert sale_type == SaleType.DEED
+
+    def test_unparseable_returns_none(self):
+        result = parse_title("MonroePATaxApr26")
         assert result is None
