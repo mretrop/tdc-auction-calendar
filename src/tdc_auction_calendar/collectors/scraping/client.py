@@ -6,12 +6,15 @@ import asyncio
 import os
 import random
 from types import TracebackType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 import httpx
 import structlog
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from tdc_auction_calendar.collectors.scraping.fetchers.crawl4ai import StealthLevel
 
 from tdc_auction_calendar.collectors.scraping.budget import BudgetLogger
 from tdc_auction_calendar.collectors.scraping.cache import ResponseCache

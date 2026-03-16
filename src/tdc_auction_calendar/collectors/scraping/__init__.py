@@ -34,7 +34,7 @@ __all__ = [
     "PermanentFetchError",
     "ScrapeClient",
     "ScrapeError",
-    "StealthLevel",
     "ScrapeResult",
+    "StealthLevel",
     "create_scrape_client",
 ]
