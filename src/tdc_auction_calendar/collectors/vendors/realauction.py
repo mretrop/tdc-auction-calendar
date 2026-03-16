@@ -2,9 +2,22 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date, datetime
 
+import structlog
 from bs4 import BeautifulSoup
+from pydantic import ValidationError
+
+from tdc_auction_calendar.collectors.base import BaseCollector
+from tdc_auction_calendar.collectors.scraping import create_scrape_client, StealthLevel
+from tdc_auction_calendar.models.auction import Auction
+from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
+
+logger = structlog.get_logger()
+
+_MONTHS_AHEAD = 2
+_MAX_CONCURRENT = 5
 
 _ACCEPTED_SALE_TYPES = frozenset({"Tax Deed", "Treasurer Deed"})
 
@@ -129,3 +142,104 @@ SITES: list[tuple[str, str, str]] = [
     ("NJ", "Hardyston", "https://hardystonnj.realforeclose.com"),
     ("NJ", "Newark", "https://newarknj.realforeclose.com"),
 ]
+
+
+class RealAuctionCollector(BaseCollector):
+    """Collects tax deed auction dates from RealAuction county portals."""
+
+    @property
+    def name(self) -> str:
+        return "realauction"
+
+    @property
+    def source_type(self) -> SourceType:
+        return SourceType.VENDOR
+
+    async def _fetch(self) -> list[Auction]:
+        client = create_scrape_client(stealth=StealthLevel.STEALTH)
+        semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
+
+        async def _fetch_one(state: str, county: str, base_url: str, url: str) -> list[Auction]:
+            async with semaphore:
+                try:
+                    result = await client.scrape(url)
+                except Exception as exc:
+                    logger.warning(
+                        "realauction_fetch_failed",
+                        state=state,
+                        county=county,
+                        url=url,
+                        error=str(exc),
+                    )
+                    return []
+
+                html = result.fetch.html or ""
+                if not html:
+                    return []
+
+                entries = parse_calendar_html(html)
+                auctions: list[Auction] = []
+                for entry in entries:
+                    raw = {
+                        "state": state,
+                        "county": county,
+                        "date": entry["date"].isoformat(),
+                        "sale_type": entry["sale_type"],
+                        "property_count": entry["property_count"],
+                        "time": entry["time"],
+                        "source_url": url,
+                    }
+                    try:
+                        auctions.append(self.normalize(raw))
+                    except (KeyError, TypeError, ValueError, ValidationError) as exc:
+                        logger.error(
+                            "realauction_normalize_failed",
+                            raw=raw,
+                            error=str(exc),
+                        )
+                return auctions
+
+        # Build all fetch tasks
+        now = date.today()
+        tasks: list = []
+        for state, county, base_url in SITES:
+            tasks.append(_fetch_one(state, county, base_url, calendar_url(base_url)))
+            month = now.month
+            year = now.year
+            for _ in range(_MONTHS_AHEAD):
+                month += 1
+                if month > 12:
+                    month = 1
+                    year += 1
+                tasks.append(_fetch_one(state, county, base_url, calendar_url(base_url, year, month)))
+
+        try:
+            results = await asyncio.gather(*tasks)
+        finally:
+            await client.close()
+
+        all_auctions: list[Auction] = []
+        for batch in results:
+            all_auctions.extend(batch)
+
+        logger.info(
+            "realauction_fetch_complete",
+            sites=len(SITES),
+            months=_MONTHS_AHEAD + 1,
+            auctions=len(all_auctions),
+        )
+        return all_auctions
+
+    def normalize(self, raw: dict) -> Auction:
+        return Auction(
+            state=raw["state"],
+            county=raw["county"],
+            start_date=date.fromisoformat(raw["date"]),
+            sale_type=SaleType.DEED,
+            source_type=SourceType.VENDOR,
+            source_url=raw["source_url"],
+            confidence_score=0.90,
+            vendor=Vendor.REALAUCTION,
+            property_count=raw.get("property_count"),
+            notes=raw.get("time", ""),
+        )

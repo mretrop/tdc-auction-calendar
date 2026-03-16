@@ -12,11 +12,19 @@ def _load(name: str) -> str:
     return (FIXTURES / name).read_text()
 
 
+from unittest.mock import AsyncMock, patch
+
+from pydantic import ValidationError
+
+from tdc_auction_calendar.collectors.scraping.client import ScrapeResult
+from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
 from tdc_auction_calendar.collectors.vendors.realauction import (
     calendar_url,
     parse_calendar_html,
+    RealAuctionCollector,
     SITES,
 )
+from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
 
 def test_parse_extracts_four_auctions():
@@ -128,3 +136,62 @@ def test_registry_contains_nj():
 
 def test_registry_total_sites():
     assert len(SITES) >= 57
+
+
+# --- Task 4: RealAuctionCollector unit tests ---
+
+
+@pytest.fixture()
+def collector():
+    return RealAuctionCollector()
+
+
+def test_name(collector):
+    assert collector.name == "realauction"
+
+
+def test_source_type(collector):
+    assert collector.source_type == SourceType.VENDOR
+
+
+def test_normalize_tax_deed(collector):
+    raw = {
+        "state": "FL",
+        "county": "Hillsborough",
+        "date": "2026-03-05",
+        "sale_type": "Tax Deed",
+        "property_count": 13,
+        "time": "10:00 AM ET",
+        "source_url": "https://hillsborough.realtaxdeed.com/index.cfm?zaction=user&zmethod=calendar",
+    }
+    auction = collector.normalize(raw)
+    assert auction.state == "FL"
+    assert auction.county == "Hillsborough"
+    assert auction.start_date == date(2026, 3, 5)
+    assert auction.sale_type == SaleType.DEED
+    assert auction.source_type == SourceType.VENDOR
+    assert auction.vendor == Vendor.REALAUCTION
+    assert auction.confidence_score == 0.90
+    assert auction.property_count == 13
+    assert "10:00 AM ET" in auction.notes
+
+
+def test_normalize_treasurer_deed(collector):
+    raw = {
+        "state": "CO",
+        "county": "Denver",
+        "date": "2026-04-15",
+        "sale_type": "Treasurer Deed",
+        "property_count": 5,
+        "time": "10:00 AM MT",
+        "source_url": "https://denver.treasurersdeedsale.realtaxdeed.com/index.cfm?zaction=user&zmethod=calendar",
+    }
+    auction = collector.normalize(raw)
+    assert auction.sale_type == SaleType.DEED
+    assert auction.state == "CO"
+
+
+def test_normalize_missing_field_raises(collector):
+    raw = {"state": "FL", "date": "2026-03-05"}
+    with pytest.raises((KeyError, ValueError, ValidationError)):
+        collector.normalize(raw)
