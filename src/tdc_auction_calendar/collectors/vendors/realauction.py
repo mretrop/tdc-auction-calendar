@@ -156,7 +156,9 @@ class RealAuctionCollector(BaseCollector):
         return SourceType.VENDOR
 
     async def _fetch(self) -> list[Auction]:
-        client = create_scrape_client(stealth=StealthLevel.STEALTH)
+        # magic=False is required — Crawl4AI's magic mode triggers the splash page
+        # redirect on RealAuction portals. StealthLevel.OFF disables magic.
+        client = create_scrape_client(stealth=StealthLevel.OFF)
         semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
 
         async def _fetch_one(state: str, county: str, base_url: str, url: str) -> list[Auction]:
