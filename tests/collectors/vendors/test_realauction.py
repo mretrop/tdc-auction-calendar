@@ -12,7 +12,11 @@ def _load(name: str) -> str:
     return (FIXTURES / name).read_text()
 
 
-from tdc_auction_calendar.collectors.vendors.realauction import parse_calendar_html
+from tdc_auction_calendar.collectors.vendors.realauction import (
+    calendar_url,
+    parse_calendar_html,
+    SITES,
+)
 
 
 def test_parse_extracts_four_auctions():
@@ -78,3 +82,49 @@ def test_parse_treasurer_deed():
 def test_parse_none_html():
     results = parse_calendar_html("")
     assert results == []
+
+
+def test_calendar_url_builds_correct_url():
+    url = calendar_url("https://hillsborough.realtaxdeed.com", 2026, 4)
+    assert url == "https://hillsborough.realtaxdeed.com/index.cfm?zaction=user&zmethod=calendar&selCalDate={ts '2026-04-01 00:00:00'}"
+
+
+def test_calendar_url_pads_month():
+    url = calendar_url("https://apache.realtaxdeed.com", 2026, 3)
+    assert "2026-03-01" in url
+
+
+def test_calendar_url_current_month():
+    url = calendar_url("https://hillsborough.realtaxdeed.com")
+    assert url == "https://hillsborough.realtaxdeed.com/index.cfm?zaction=user&zmethod=calendar"
+
+
+def test_registry_contains_florida_counties():
+    fl_sites = [(s, c, u) for s, c, u in SITES if s == "FL"]
+    assert len(fl_sites) >= 37
+    counties = {c for _, c, _ in fl_sites}
+    assert "Hillsborough" in counties
+    assert "Miami-Dade" in counties
+    assert "Alachua" in counties
+
+
+def test_registry_contains_arizona_counties():
+    az_sites = [(s, c, u) for s, c, u in SITES if s == "AZ"]
+    assert len(az_sites) == 3
+    counties = {c for _, c, _ in az_sites}
+    assert counties == {"Apache", "Coconino", "Mohave"}
+
+
+def test_registry_contains_colorado_counties():
+    co_sites = [(s, c, u) for s, c, u in SITES if s == "CO"]
+    assert len(co_sites) == 8
+    assert all("treasurersdeedsale" in u for _, _, u in co_sites)
+
+
+def test_registry_contains_nj():
+    nj_sites = [(s, c, u) for s, c, u in SITES if s == "NJ"]
+    assert len(nj_sites) == 2
+
+
+def test_registry_total_sites():
+    assert len(SITES) >= 57
