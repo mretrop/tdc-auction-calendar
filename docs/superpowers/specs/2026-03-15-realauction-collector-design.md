@@ -2,11 +2,11 @@
 
 **Date:** 2026-03-15
 **Issue:** #50 — [M5] Collector: RealAuction county subdomains
-**Status:** Draft
+**Status:** Approved
 
 ## Summary
 
-Build a collector that scrapes RealAuction county auction portals for upcoming tax deed sale dates. The collector targets `.realtaxdeed.com` and `.realforeclose.com` subdomains across ~48 counties in FL, AZ, CO, and NJ, parsing their public auction calendar pages with CSS selectors.
+Build a collector that scrapes RealAuction county auction portals for upcoming tax deed sale dates. The collector targets `.realtaxdeed.com` and `.realforeclose.com` subdomains across ~57 counties in FL, AZ, CO, and NJ, parsing their public auction calendar pages with CSS selectors on raw HTML.
 
 ## Background
 
@@ -69,7 +69,7 @@ The calendar is server-rendered HTML. Auction dates use a consistent structure:
 
 ## Site Registry
 
-The collector uses a hardcoded registry in `vendor_mapping.json`. Each entry includes state, county name, and base URL (subdomain). The full list:
+The collector reads its site list from `vendor_mapping.json` via the database (`VendorMappingRow` table, filtered by `vendor == "RealAuction"`). Each entry's `portal_url` is the subdomain base URL; the collector appends the calendar path.
 
 ### Arizona (3 counties)
 | County | Subdomain |
@@ -131,26 +131,30 @@ The collector uses a hardcoded registry in `vendor_mapping.json`. Each entry inc
 | Volusia | `volusia.realtaxdeed.com` |
 | Washington | `washington.realtaxdeed.com` |
 
-### Florida — Combined Portals (7 counties)
+### Florida — Combined Portals (9 counties)
 These use `.realforeclose.com` and show both Foreclosure and Tax Deed; collector filters for TD only.
 
-| County | Subdomain |
-|--------|-----------|
-| Calhoun | `calhoun.realforeclose.com` |
-| Charlotte | `charlotte.realforeclose.com` |
-| Manatee | `manatee.realforeclose.com` |
-| Miami-Dade | `miamidade.realforeclose.com` |
-| Okeechobee | `okeechobee.realforeclose.com` |
-| St. Lucie | `stlucie.realforeclose.com` |
-| Walton | `walton.realforeclose.com` |
+| County | Subdomain | Notes |
+|--------|-----------|-------|
+| Broward | `broward.realforeclose.com` | Foreclosure-only in dropdown; may or may not have TD entries |
+| Calhoun | `calhoun.realforeclose.com` | |
+| Charlotte | `charlotte.realforeclose.com` | |
+| Collier | `collier.realforeclose.com` | Not in dropdown; existing seed data entry — keep and test |
+| Manatee | `manatee.realforeclose.com` | |
+| Miami-Dade | `miamidade.realforeclose.com` | Confirmed: shows TD entries |
+| Okeechobee | `okeechobee.realforeclose.com` | |
+| St. Lucie | `stlucie.realforeclose.com` | |
+| Walton | `walton.realforeclose.com` | |
 
-### New Jersey (2 municipalities)
+### New Jersey (2 entries)
+NJ entries are municipalities, not counties. Use the municipality name in the `county` field for consistency with the existing `VendorMappingRow` schema (which uses `county` as the field name). This is acceptable — the dedup key just needs a consistent identifier per jurisdiction.
+
 | Municipality | Subdomain |
 |--------|-----------|
 | Hardyston | `hardystonnj.realforeclose.com` |
 | Newark | `newarknj.realforeclose.com` |
 
-**Total: ~57 sites** (some may be foreclosure-only on combined portals; collector gracefully handles empty calendars).
+**Total: ~59 sites** (some may be foreclosure-only on combined portals; collector gracefully handles empty calendars).
 
 ## Collector Design
 
@@ -167,23 +171,28 @@ source_type = SourceType.VENDOR
 
 ### `_fetch()` Flow
 
-1. Load RealAuction entries from `vendor_mapping.json` (filtered by `vendor == "RealAuction"`)
+1. Query `VendorMappingRow` table filtered by `vendor == "RealAuction"` to get the site list
 2. Create `ScrapeClient` via `create_scrape_client(stealth=StealthLevel.STEALTH)`
-3. For each county entry:
-   a. Build calendar URLs for current month + next 2 months
-   b. Fetch each URL via `ScrapeClient` (gets raw HTML/markdown)
-   c. Parse HTML with BeautifulSoup (already a project dependency via crawl4ai)
-   d. Extract auction cells (`.CALSELT` selector)
-   e. Filter for Tax Deed / Treasurer Deed entries
-   f. Call `normalize()` on each extracted record
-4. Return all auctions
+3. Use `asyncio.Semaphore(5)` to limit concurrent requests across all counties
+4. Use `asyncio.gather()` to fetch all county/month combinations concurrently (bounded by semaphore):
+   - For each county entry, build calendar URLs for current month + next 2 months
+   - Fetch each URL via `ScrapeClient`
+   - Parse raw HTML via `result.fetch.html` with BeautifulSoup
+   - Extract auction cells (`.CALSELT` selector)
+   - Filter for Tax Deed / Treasurer Deed entries
+   - Call `normalize()` on each extracted record
+5. Return all auctions
+
+### HTML Access
+
+Both `CloudflareFetcher` and `Crawl4AiFetcher` populate `FetchResult.html` with the raw page HTML. The collector uses `result.fetch.html` (not `result.fetch.markdown`) because CSS class selectors (`.CALSELT`, `.CALTEXT`, `.CALSCH`, `.CALTIME`) are stripped during markdown conversion.
 
 ### Month URL Generation
 
 ```python
 def _calendar_url(self, base_url: str, year: int, month: int) -> str:
     date_param = f"{{ts '{year:04d}-{month:02d}-01 00:00:00'}}"
-    return f"https://{base_url}/index.cfm?zaction=user&zmethod=calendar&selCalDate={date_param}"
+    return f"{base_url}/index.cfm?zaction=user&zmethod=calendar&selCalDate={date_param}"
 ```
 
 For the current month, use no `selCalDate` param (defaults to current month).
@@ -196,41 +205,55 @@ For the current month, use no `selCalDate` param (defaults to current month).
 | `.CALTEXT` first text | `sale_type` | `SaleType.DEED` for both "Tax Deed" and "Treasurer Deed" |
 | `.CALSCH` | `property_count` | Scheduled count (int) |
 | `.CALTIME` | `notes` | e.g., `"10:00 AM ET"` |
-| Registry entry | `state`, `county` | From vendor_mapping.json |
+| Registry entry | `state`, `county` | From VendorMappingRow |
 | Calendar page URL | `source_url` | The fetched calendar URL |
 | Constant | `vendor` | `Vendor.RealAuction` |
 | Constant | `source_type` | `SourceType.VENDOR` |
 | Constant | `status` | `AuctionStatus.UPCOMING` |
-| Constant | `confidence_score` | `0.90` |
+| Constant | `confidence_score` | `0.90` (deterministic parsing of structured HTML, but auctions can be cancelled between scrapes) |
 
 ### Rate Limiting
 
-~150 requests total (57 counties x ~3 months). All subdomains resolve to the same RealAuction server infrastructure. The `ScrapeClient` rate limiter keys on domain, but since each subdomain is different, requests won't be naturally throttled against each other.
+~175 requests total (59 counties x ~3 months). All subdomains resolve to the same RealAuction server infrastructure. The `ScrapeClient` rate limiter keys on domain, but since each subdomain is different, requests won't be naturally throttled against each other.
 
-**Solution:** Use `asyncio.Semaphore` within the collector to limit concurrency (e.g., max 5 concurrent requests). Combined with the per-domain 2s rate limit on retries, this prevents hammering RealAuction's shared infrastructure.
+**Solution:** Use `asyncio.Semaphore(5)` within the collector to limit concurrency. Combined with the per-domain 2s rate limit on retries, this prevents hammering RealAuction's shared infrastructure.
 
 ### Error Handling
 
 - **403 on a county:** Log warning, skip county, continue with others
 - **Empty calendar (no `.CALSELT` cells):** Normal — county has no auctions that month, skip silently
-- **Malformed HTML:** Log warning with county name, skip that page
+- **Malformed HTML / `html` field is None:** Log warning with county name, skip that page
 - **Network timeout:** `ScrapeClient` retry logic handles this (3 retries with exponential backoff)
+- **Partial failures:** If N of 59 counties fail, collector returns results from the successful ones
 
 ## Vendor Mapping Updates
 
-Add new entries to `vendor_mapping.json` for all ~57 sites. Each entry follows the existing format:
+Update and expand `vendor_mapping.json` RealAuction entries. Each entry follows the existing schema:
 
 ```json
 {
   "vendor": "RealAuction",
+  "vendor_url": "https://www.realauction.com",
   "state": "FL",
   "county": "Hillsborough",
-  "portal_url": "https://hillsborough.realtaxdeed.com",
-  "sale_type": "DEED"
+  "portal_url": "https://hillsborough.realtaxdeed.com"
 }
 ```
 
-The existing 20 FL RealAuction entries in `vendor_mapping.json` use `realforeclose.com` URLs — these will be updated to point to the correct `.realtaxdeed.com` subdomains where applicable, and new entries added for the ~37 additional counties.
+### Migration Plan for Existing 20 Entries
+
+The existing 20 FL entries all use `.realforeclose.com` URLs. Changes:
+
+- **Update portal_url** for counties that have dedicated `.realtaxdeed.com` subdomains (e.g., Hillsborough, Orange, Duval, Pinellas, Lee, Polk, Brevard, Volusia, Seminole, Sarasota, Pasco, Escambia, Leon, Osceola, Marion, Palm Beach)
+- **Keep `.realforeclose.com`** for combined portals (Miami-Dade, Broward, Manatee, Collier)
+- **Add ~39 new entries** for AZ, CO, NJ, and additional FL counties not in the current seed
+
+### Orchestrator Registration
+
+The new collector must be registered in:
+- `src/tdc_auction_calendar/collectors/vendors/__init__.py` (export)
+- `src/tdc_auction_calendar/collectors/__init__.py` (re-export + `__all__`)
+- `src/tdc_auction_calendar/collectors/orchestrator.py` (COLLECTORS dict)
 
 ## Testing
 
@@ -245,6 +268,7 @@ The existing 20 FL RealAuction entries in `vendor_mapping.json` use `realforeclo
 5. **Month URL generation:** Verify correct URL format for different months
 6. **Sale type mapping:** "Tax Deed" -> DEED, "Treasurer Deed" -> DEED, "Foreclosure" -> skipped
 7. **Date parsing:** Verify `"March-05-2026"` aria-label format parses correctly
+8. **Partial failure:** Verify collector returns results from successful counties when some fail
 
 ### Integration Considerations
 
@@ -253,11 +277,6 @@ The existing 20 FL RealAuction entries in `vendor_mapping.json` use `realforeclo
 
 ## Dependencies
 
-No new dependencies required:
-- `beautifulsoup4` — already available via crawl4ai dependency
+- `beautifulsoup4` — add as direct dependency in `pyproject.toml` (currently only transitive via crawl4ai)
 - `ScrapeClient` — existing infrastructure
 - `BaseCollector` — existing base class
-
-## Open Questions
-
-None — all design decisions resolved during brainstorming.
