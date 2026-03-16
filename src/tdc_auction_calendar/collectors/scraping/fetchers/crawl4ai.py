@@ -37,12 +37,23 @@ class Crawl4AiFetcher:
         if self._crawler is None:
             try:
                 from crawl4ai import AsyncWebCrawler
+                from crawl4ai.async_configs import BrowserConfig
             except ImportError as exc:
                 raise RuntimeError(
                     "crawl4ai is required but not installed. Install with: uv add crawl4ai"
                 ) from exc
 
-            crawler = AsyncWebCrawler()
+            logger.info("crawl4ai_init", stealth=self._stealth.value)
+
+            if self._stealth == StealthLevel.OFF:
+                crawler = AsyncWebCrawler()
+            elif self._stealth == StealthLevel.STEALTH:
+                browser_config = BrowserConfig(headless=True, enable_stealth=True)
+                crawler = AsyncWebCrawler(config=browser_config)
+            else:
+                # UNDETECTED — handled in next task
+                raise NotImplementedError(f"StealthLevel.UNDETECTED not yet implemented")
+
             try:
                 await crawler.__aenter__()
             except Exception as exc:

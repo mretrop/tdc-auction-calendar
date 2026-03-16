@@ -143,7 +143,7 @@ async def test_get_crawler_import_error():
     """Missing crawl4ai package raises RuntimeError."""
     fetcher = Crawl4AiFetcher()  # no crawler injected
 
-    with patch.dict("sys.modules", {"crawl4ai": None}):
+    with patch.dict("sys.modules", {"crawl4ai": None, "crawl4ai.async_configs": None}):
         with pytest.raises(RuntimeError, match="crawl4ai is required"):
             await fetcher.fetch("https://example.com")
 
@@ -155,9 +155,11 @@ async def test_get_crawler_browser_init_failure():
     mock_crawler_instance.__aenter__ = AsyncMock(side_effect=OSError("no browser"))
     mock_module.AsyncWebCrawler.return_value = mock_crawler_instance
 
-    fetcher = Crawl4AiFetcher()
+    mock_configs = MagicMock()
 
-    with patch.dict("sys.modules", {"crawl4ai": mock_module}):
+    fetcher = Crawl4AiFetcher(stealth=StealthLevel.OFF)
+
+    with patch.dict("sys.modules", {"crawl4ai": mock_module, "crawl4ai.async_configs": mock_configs}):
         with pytest.raises(RuntimeError, match="Failed to initialize headless browser"):
             await fetcher.fetch("https://example.com")
 
@@ -170,14 +172,72 @@ async def test_get_crawler_lazy_creates_once():
     mock_crawler_instance.arun = AsyncMock(return_value=_mock_crawl_result())
     mock_module.AsyncWebCrawler.return_value = mock_crawler_instance
 
-    fetcher = Crawl4AiFetcher()
+    mock_configs = MagicMock()
 
-    with patch.dict("sys.modules", {"crawl4ai": mock_module}):
+    fetcher = Crawl4AiFetcher(stealth=StealthLevel.OFF)
+
+    with patch.dict("sys.modules", {"crawl4ai": mock_module, "crawl4ai.async_configs": mock_configs}):
         await fetcher.fetch("https://example.com")
         await fetcher.fetch("https://example.com/page2")
 
     # AsyncWebCrawler() called only once
     assert mock_module.AsyncWebCrawler.call_count == 1
+
+
+# --- Tests: _get_crawler() stealth level configuration ---
+
+
+async def test_get_crawler_stealth_configures_browser():
+    """STEALTH level passes BrowserConfig(headless=True, enable_stealth=True) to AsyncWebCrawler."""
+    mock_browser_config = MagicMock()
+    mock_browser_config_cls = MagicMock(return_value=mock_browser_config)
+
+    mock_crawler_instance = MagicMock()
+    mock_crawler_instance.__aenter__ = AsyncMock(return_value=mock_crawler_instance)
+    mock_crawler_instance.arun = AsyncMock(return_value=_mock_crawl_result())
+    mock_web_crawler_cls = MagicMock(return_value=mock_crawler_instance)
+
+    mock_configs = MagicMock()
+    mock_configs.BrowserConfig = mock_browser_config_cls
+    mock_configs.CrawlerRunConfig = MagicMock()
+
+    mock_crawl4ai = MagicMock()
+    mock_crawl4ai.AsyncWebCrawler = mock_web_crawler_cls
+
+    fetcher = Crawl4AiFetcher(stealth=StealthLevel.STEALTH)
+
+    with patch.dict("sys.modules", {
+        "crawl4ai": mock_crawl4ai,
+        "crawl4ai.async_configs": mock_configs,
+    }):
+        await fetcher.fetch("https://example.com")
+
+    mock_browser_config_cls.assert_called_once_with(headless=True, enable_stealth=True)
+    mock_web_crawler_cls.assert_called_once_with(config=mock_browser_config)
+
+
+async def test_get_crawler_off_uses_plain_crawler():
+    """OFF level creates AsyncWebCrawler with no config."""
+    mock_crawler_instance = MagicMock()
+    mock_crawler_instance.__aenter__ = AsyncMock(return_value=mock_crawler_instance)
+    mock_crawler_instance.arun = AsyncMock(return_value=_mock_crawl_result())
+    mock_web_crawler_cls = MagicMock(return_value=mock_crawler_instance)
+
+    mock_configs = MagicMock()
+    mock_configs.CrawlerRunConfig = MagicMock()
+
+    mock_crawl4ai = MagicMock()
+    mock_crawl4ai.AsyncWebCrawler = mock_web_crawler_cls
+
+    fetcher = Crawl4AiFetcher(stealth=StealthLevel.OFF)
+
+    with patch.dict("sys.modules", {
+        "crawl4ai": mock_crawl4ai,
+        "crawl4ai.async_configs": mock_configs,
+    }):
+        await fetcher.fetch("https://example.com")
+
+    mock_web_crawler_cls.assert_called_once_with()
 
 
 # --- Gap-fill tests: generic exception wrapping ---
@@ -234,9 +294,11 @@ async def test_close_owned_crawler():
     mock_crawler_instance.arun = AsyncMock(return_value=_mock_crawl_result())
     mock_module.AsyncWebCrawler.return_value = mock_crawler_instance
 
-    fetcher = Crawl4AiFetcher()
+    mock_configs = MagicMock()
 
-    with patch.dict("sys.modules", {"crawl4ai": mock_module}):
+    fetcher = Crawl4AiFetcher(stealth=StealthLevel.OFF)
+
+    with patch.dict("sys.modules", {"crawl4ai": mock_module, "crawl4ai.async_configs": mock_configs}):
         await fetcher.fetch("https://example.com")
 
     await fetcher.close()
