@@ -2,29 +2,26 @@
 
 from datetime import date
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import pytest
+from pydantic import ValidationError
+
+from tdc_auction_calendar.collectors.scraping.client import ScrapeResult
+from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
+from tdc_auction_calendar.collectors.vendors.realauction import (
+    SITES,
+    RealAuctionCollector,
+    calendar_url,
+    parse_calendar_html,
+)
+from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def _load(name: str) -> str:
     return (FIXTURES / name).read_text()
-
-
-from unittest.mock import AsyncMock, patch
-
-from pydantic import ValidationError
-
-from tdc_auction_calendar.collectors.scraping.client import ScrapeResult
-from tdc_auction_calendar.collectors.scraping.fetchers.protocol import FetchResult
-from tdc_auction_calendar.collectors.vendors.realauction import (
-    calendar_url,
-    parse_calendar_html,
-    RealAuctionCollector,
-    SITES,
-)
-from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
 
 def test_parse_extracts_four_auctions():
