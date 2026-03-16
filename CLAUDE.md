@@ -23,7 +23,7 @@ uv run alembic revision --autogenerate -m "description"  # Generate new migratio
 
 - **Package**: `src/tdc_auction_calendar/` (src layout, managed by uv)
 - **models/**: Pydantic + SQLAlchemy dual models (validation and ORM)
-  - `enums.py`: SaleType, AuctionStatus, SourceType, Priority (all StrEnum)
+  - `enums.py`: SaleType, AuctionStatus, SourceType, Priority, Vendor (all StrEnum)
   - `auction.py`: AuctionRow (ORM) + Auction (Pydantic) with dedup key `(state, county, start_date, sale_type)`
   - `jurisdiction.py`: StateRulesRow/CountyInfoRow (ORM) + StateRules/CountyInfo (Pydantic), also houses `Base` (DeclarativeBase)
 - **collectors/**: Scraping modules that gather auction dates from various sources
@@ -46,7 +46,7 @@ Collectors use a two-tier fetch+extract architecture built on `ScrapeClient`:
 - **Fallback extraction:** `LLMExtraction` (Claude API tool_use) — used when Crawl4AI is the fetcher (no built-in extraction)
 - **Lightweight extraction:** `CSSExtraction` — available for sources with stable, simple HTML structure
 
-Most collectors define a Pydantic schema and extraction prompt. When Cloudflare is primary, extraction happens in a single round trip. When falling back to Crawl4AI, `LLMExtraction` handles extraction as a separate step. Some collectors with stable, structured sources use deterministic regex parsing instead of LLM extraction (e.g., `ArkansasCollector` parses COSL catalog markdown directly).
+Most collectors define a Pydantic schema and extraction prompt. When Cloudflare is primary, extraction happens in a single round trip. When falling back to Crawl4AI, `LLMExtraction` handles extraction as a separate step. Some collectors with stable, structured sources use deterministic regex parsing instead of LLM extraction (e.g., `ArkansasCollector`, `MVBACollector`).
 
 Key files: `collectors/scraping/client.py` (orchestrator), `collectors/scraping/fetchers/cloudflare.py`, `collectors/scraping/fetchers/crawl4ai.py`, `collectors/scraping/extraction.py`
 
