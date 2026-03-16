@@ -25,7 +25,7 @@ from tdc_auction_calendar.collectors.state_agencies import (
     IowaCollector,
 )
 from tdc_auction_calendar.collectors.statutory import StatutoryCollector
-from tdc_auction_calendar.collectors.vendors import PurdueCollector
+from tdc_auction_calendar.collectors.vendors import MVBACollector, PurdueCollector
 from tdc_auction_calendar.db.upsert import save_collector_health, upsert_auctions
 from tdc_auction_calendar.models.auction import Auction, DeduplicationKey
 from tdc_auction_calendar.models.health import CollectorError, RunReport
@@ -47,6 +47,7 @@ COLLECTORS: dict[str, type[BaseCollector]] = {
     "county_website": CountyWebsiteCollector,
     "statutory": StatutoryCollector,
     "purdue_vendor": PurdueCollector,
+    "mvba_vendor": MVBACollector,
 }
 
 
