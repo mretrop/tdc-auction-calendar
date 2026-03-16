@@ -9,6 +9,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
+from tdc_auction_calendar.collectors.scraping.client import ScrapeError
 from tdc_auction_calendar.collectors.vendors.bid4assets import (
     Bid4AssetsCollector,
     parse_calendar_html,
@@ -27,52 +28,52 @@ def _load(name: str) -> str:
 
 class TestParseDateRange:
     def test_multi_day_range(self):
-        start, end = parse_date_range("May", "May 8th - 12th", 2026)
+        start, end = parse_date_range("May 8th - 12th", 2026)
         assert start == date(2026, 5, 8)
         assert end == date(2026, 5, 12)
 
     def test_single_day_range(self):
-        start, end = parse_date_range("April", "April 8th - 8th", 2026)
+        start, end = parse_date_range("April 8th - 8th", 2026)
         assert start == date(2026, 4, 8)
         assert end is None
 
     def test_ordinal_suffixes(self):
-        start, end = parse_date_range("May", "May 1st - 4th", 2026)
+        start, end = parse_date_range("May 1st - 4th", 2026)
         assert start == date(2026, 5, 1)
         assert end == date(2026, 5, 4)
 
     def test_ordinal_nd(self):
-        start, end = parse_date_range("April", "April 22nd - 22nd", 2026)
+        start, end = parse_date_range("April 22nd - 22nd", 2026)
         assert start == date(2026, 4, 22)
         assert end is None
 
     def test_ordinal_rd(self):
-        start, end = parse_date_range("May", "May 23rd - 27th", 2026)
+        start, end = parse_date_range("May 23rd - 27th", 2026)
         assert start == date(2026, 5, 23)
         assert end == date(2026, 5, 27)
 
     def test_date_range_without_month_prefix(self):
-        start, end = parse_date_range("June", "June 5th - 8th", 2026)
+        start, end = parse_date_range("June 5th - 8th", 2026)
         assert start == date(2026, 6, 5)
         assert end == date(2026, 6, 8)
 
     def test_cross_month_range(self):
-        start, end = parse_date_range("March", "March 30th - 2nd", 2026)
+        start, end = parse_date_range("March 30th - 2nd", 2026)
         assert start == date(2026, 3, 30)
         assert end == date(2026, 4, 2)
 
     def test_cross_month_with_both_months_named(self):
-        start, end = parse_date_range("October", "October 27th - November 13th", 2025)
+        start, end = parse_date_range("October 27th - November 13th", 2025)
         assert start == date(2025, 10, 27)
         assert end == date(2025, 11, 13)
 
     def test_cross_month_november_december(self):
-        start, end = parse_date_range("November", "November 26th - December 5th", 2025)
+        start, end = parse_date_range("November 26th - December 5th", 2025)
         assert start == date(2025, 11, 26)
         assert end == date(2025, 12, 5)
 
     def test_invalid_date_range_returns_none(self):
-        result = parse_date_range("August", "Tax Sale Dates to be announced soon for August", 2026)
+        result = parse_date_range("Tax Sale Dates to be announced soon for August", 2026)
         assert result is None
 
 
@@ -294,58 +295,70 @@ def _mock_httpx_response(html: str, status_code: int = 200) -> MagicMock:
     return resp
 
 
-async def test_fetch_returns_auctions():
-    html = _load("bid4assets_calendar.html")
-    mock_client = AsyncMock()
-    mock_client.get.return_value = _mock_httpx_response(html)
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
-
-    collector = Bid4AssetsCollector()
-    with patch("tdc_auction_calendar.collectors.vendors.bid4assets.httpx.AsyncClient", return_value=mock_client):
-        auctions = await collector.collect()
-
-    assert len(auctions) > 0
-    assert all(a.vendor == Vendor.BID4ASSETS for a in auctions)
-    assert all(a.source_type == SourceType.VENDOR for a in auctions)
-
-
-async def test_fetch_empty_html_returns_empty():
-    mock_client = AsyncMock()
-    mock_client.get.return_value = _mock_httpx_response("")
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
-
-    collector = Bid4AssetsCollector()
-    with patch("tdc_auction_calendar.collectors.vendors.bid4assets.httpx.AsyncClient", return_value=mock_client):
-        auctions = await collector.collect()
-
-    assert auctions == []
+@pytest.fixture()
+def _mock_client():
+    """Helper to create a patched httpx.AsyncClient context."""
+    def _make(html: str, status_code: int = 200):
+        mock_client = AsyncMock()
+        mock_client.get.return_value = _mock_httpx_response(html, status_code)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        return patch(
+            "tdc_auction_calendar.collectors.vendors.bid4assets.httpx.AsyncClient",
+            return_value=mock_client,
+        )
+    return _make
 
 
-async def test_fetch_http_error_returns_empty():
-    mock_client = AsyncMock()
-    mock_client.get.return_value = _mock_httpx_response("blocked", status_code=403)
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
+class TestFetch:
+    async def test_returns_auctions(self, _mock_client):
+        html = _load("bid4assets_calendar.html")
+        collector = Bid4AssetsCollector()
+        with _mock_client(html):
+            auctions = await collector.collect()
 
-    collector = Bid4AssetsCollector()
-    with patch("tdc_auction_calendar.collectors.vendors.bid4assets.httpx.AsyncClient", return_value=mock_client):
-        auctions = await collector.collect()
+        # 10 parsed - 1 no state (Carson City) - 1 dedup (Klickitat) = 8
+        assert len(auctions) == 8
+        assert all(a.vendor == Vendor.BID4ASSETS for a in auctions)
+        assert all(a.source_type == SourceType.VENDOR for a in auctions)
 
-    assert auctions == []
+    async def test_empty_html_raises(self, _mock_client):
+        collector = Bid4AssetsCollector()
+        with _mock_client(""):
+            with pytest.raises(ScrapeError):
+                await collector.collect()
+
+    async def test_blocked_response_raises(self, _mock_client):
+        """Akamai block page returns 200 but lacks auction-calendar class."""
+        collector = Bid4AssetsCollector()
+        with _mock_client("<html><body>Access Denied</body></html>"):
+            with pytest.raises(ScrapeError):
+                await collector.collect()
+
+    async def test_http_error_raises(self, _mock_client):
+        collector = Bid4AssetsCollector()
+        with _mock_client("blocked", status_code=403):
+            with pytest.raises(ScrapeError):
+                await collector.collect()
+
+    async def test_filters_none_state_entries(self, _mock_client):
+        html = _load("bid4assets_calendar.html")
+        collector = Bid4AssetsCollector()
+        with _mock_client(html):
+            auctions = await collector.collect()
+
+        assert all(a.state is not None for a in auctions)
+        assert all(len(a.state) == 2 for a in auctions)
 
 
-async def test_fetch_filters_none_state_entries():
-    html = _load("bid4assets_calendar.html")
-    mock_client = AsyncMock()
-    mock_client.get.return_value = _mock_httpx_response(html)
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
+class TestParseDateRangeEdgeCases:
+    def test_december_to_january_rollover(self):
+        start, end = parse_date_range("December 30th - 2nd", 2025)
+        assert start == date(2025, 12, 30)
+        assert end == date(2026, 1, 2)
 
-    collector = Bid4AssetsCollector()
-    with patch("tdc_auction_calendar.collectors.vendors.bid4assets.httpx.AsyncClient", return_value=mock_client):
-        auctions = await collector.collect()
+    def test_invalid_month_name_returns_none(self):
+        assert parse_date_range("Octber 27th - 30th", 2026) is None
 
-    assert all(a.state is not None for a in auctions)
-    assert all(len(a.state) == 2 for a in auctions)
+    def test_cross_month_invalid_month_returns_none(self):
+        assert parse_date_range("Octber 27th - November 13th", 2026) is None

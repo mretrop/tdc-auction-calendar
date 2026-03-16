@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 
 from pydantic import ValidationError
 from tdc_auction_calendar.collectors.base import BaseCollector
+from tdc_auction_calendar.collectors.scraping.client import ScrapeError
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
@@ -36,12 +37,11 @@ _DATE_RANGE_RE = re.compile(
 
 
 def parse_date_range(
-    column_month: str, text: str, year: int
+    text: str, year: int
 ) -> tuple[date, date | None] | None:
     """Parse a date range string from the Bid4Assets calendar.
 
     Args:
-        column_month: The month name from the column header (e.g., "May").
         text: The date range text (e.g., "May 8th - 12th").
         year: The calendar year.
 
@@ -202,15 +202,18 @@ def parse_calendar_html(html: str) -> list[dict]:
         # Get year from data-year attribute
         year_str = month_div.get("data-year")
         if year_str is None:
+            logger.warning("bid4assets_missing_data_year")
             continue
         try:
             year = int(year_str)
         except ValueError:
+            logger.warning("bid4assets_invalid_data_year", data_year=year_str)
             continue
 
         # Get month name from header
         header = month_div.select_one("div.title h3")
         if header is None:
+            logger.warning("bid4assets_missing_month_header", year=year)
             continue
         month_name = header.get_text().strip()
 
@@ -242,12 +245,13 @@ def parse_calendar_html(html: str) -> list[dict]:
             date_text = span_el.get_text().strip()
 
             # Parse date range
-            date_result = parse_date_range(month_name, date_text, year)
+            date_result = parse_date_range(date_text, year)
             if date_result is None:
-                logger.info(
-                    "bid4assets_skipped_entry",
+                logger.warning(
+                    "bid4assets_date_parse_failed",
                     title=title_text,
                     date_text=date_text,
+                    column_month=month_name,
                 )
                 continue
             start_date, end_date = date_result
@@ -319,12 +323,20 @@ class Bid4AssetsCollector(BaseCollector):
                 resp.raise_for_status()
                 html = resp.text
         except httpx.HTTPError as exc:
-            logger.error("bid4assets_fetch_failed", url=_CALENDAR_URL, error=str(exc))
-            return []
+            raise ScrapeError(
+                url=_CALENDAR_URL,
+                attempts=[{"fetcher": "httpx", "error": str(exc)}],
+            ) from exc
 
         if not html or "auction-calendar" not in html:
-            logger.warning("bid4assets_empty_or_blocked", url=_CALENDAR_URL, html_length=len(html or ""))
-            return []
+            raise ScrapeError(
+                url=_CALENDAR_URL,
+                attempts=[{
+                    "fetcher": "httpx",
+                    "error": f"Unexpected content (length={len(html or '')}). "
+                             "Possible Akamai block or site redesign.",
+                }],
+            )
 
         entries = parse_calendar_html(html)
 
@@ -338,11 +350,18 @@ class Bid4AssetsCollector(BaseCollector):
                 continue
             try:
                 auctions.append(self.normalize(entry))
-            except (KeyError, TypeError, ValueError, ValidationError) as exc:
-                logger.error(
-                    "bid4assets_normalize_failed",
+            except ValidationError as exc:
+                logger.warning(
+                    "bid4assets_validation_failed",
                     entry=entry,
                     error=str(exc),
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                logger.error(
+                    "bid4assets_normalize_bug",
+                    entry=entry,
+                    error=str(exc),
+                    error_type=type(exc).__name__,
                 )
 
         logger.info(
