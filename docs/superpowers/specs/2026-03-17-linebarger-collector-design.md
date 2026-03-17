@@ -65,19 +65,20 @@ Returns all 36 counties with active sales. Not needed for the collector itself (
 | `state` | `state` | Direct (already 2-letter code) |
 | `county` | `county` | Strip " COUNTY" suffix, title-case |
 | `sale_date_only` | `start_date` | Parse YYYY-MM-DD |
-| `status` | `status` | "Scheduled..." → `UPCOMING`, "Cancelled" → filtered out |
-| (derived from state) | `sale_type` | TX → `DEED`, PA → `LIEN` |
+| `status` | `status` | "Scheduled for Auction" / "Scheduled for Online Auction" → `UPCOMING`, "Cancelled" → filtered out |
+| (derived from state) | `sale_type` | TX → `DEED`, PA → `DEED` |
 | (constant) | `source_type` | `SourceType.VENDOR` |
 | (constant) | `vendor` | `Vendor.LINEBARGER` |
 | (derived) | `source_url` | `https://taxsales.lgbs.com/map?area={state}` |
 | (constant) | `confidence_score` | `1.0` (direct API data) |
+| (not available) | `end_date` | `None` |
 
 ## Sale Type Mapping
 
 Linebarger uses its own sale type labels (Sale, Resale, Struck-off, Future sale). These are all sub-categories of tax deed/lien sales, not our `SaleType` enum values. We map based on state:
 
 - **TX** → `SaleType.DEED` (Texas is a deed state)
-- **PA** → `SaleType.LIEN` (Pennsylvania is a lien state)
+- **PA** → `SaleType.DEED` (Pennsylvania conducts upset/judicial tax sales — deed state per seed data)
 
 All four Linebarger sale types (Sale, Resale, Struck-off, Future sale) map to the same `SaleType` per state.
 
@@ -100,7 +101,7 @@ All four Linebarger sale types (Sale, Resale, Struck-off, Future sale) map to th
 - **Pagination**: Current data fits in one page (62 results, limit=1000). If count exceeds limit, follow `next` URLs in a loop.
 - **Future sales**: Include if `sale_date_only` is present. Skip if date is null/empty.
 - **County name normalization**: Strip " COUNTY" suffix, title-case. Handles multi-word names like "JIM HOGG COUNTY" → "Jim Hogg", "FORT BEND COUNTY" → "Fort Bend".
-- **API unavailability**: Standard httpx error handling with retries (match Bid4Assets pattern).
+- **API unavailability**: Raise `ScrapeError` on failure (match Bid4Assets pattern — no retries at collector level).
 
 ## Testing Strategy
 
