@@ -138,7 +138,7 @@ class LinebargerCollector(BaseCollector):
                 while url:
                     resp = await client.get(url)
                     resp.raise_for_status()
-                    data = await resp.json()
+                    data = resp.json()
                     all_results.extend(data.get("results", []))
                     url = data.get("next")
         except httpx.HTTPError as exc:

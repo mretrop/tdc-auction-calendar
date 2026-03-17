@@ -204,7 +204,7 @@ class TestParseApiResponse:
         assert len(auctions) == 0
 
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 from tdc_auction_calendar.collectors.scraping.client import ScrapeError
 from tdc_auction_calendar.collectors.vendors.linebarger import LinebargerCollector
@@ -255,9 +255,9 @@ class TestLinebargerCollector:
                 },
             ],
         }
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.json.return_value = mock_json
-        mock_response.raise_for_status = lambda: None
+        mock_response.raise_for_status = MagicMock()
 
         with patch("tdc_auction_calendar.collectors.vendors.linebarger.httpx.AsyncClient") as mock_client_cls:
             mock_client = AsyncMock()
@@ -319,13 +319,13 @@ class TestLinebargerCollector:
             ],
         }
 
-        resp1 = AsyncMock()
+        resp1 = MagicMock()
         resp1.json.return_value = page1
-        resp1.raise_for_status = lambda: None
+        resp1.raise_for_status = MagicMock()
 
-        resp2 = AsyncMock()
+        resp2 = MagicMock()
         resp2.json.return_value = page2
-        resp2.raise_for_status = lambda: None
+        resp2.raise_for_status = MagicMock()
 
         with patch("tdc_auction_calendar.collectors.vendors.linebarger.httpx.AsyncClient") as mock_client_cls:
             mock_client = AsyncMock()
