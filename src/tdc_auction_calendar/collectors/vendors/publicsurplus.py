@@ -3,11 +3,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from datetime import date, datetime, timezone
 
+import httpx
 import structlog
 from bs4 import BeautifulSoup
+from pydantic import ValidationError
+
+from tdc_auction_calendar.collectors.base import BaseCollector
+from tdc_auction_calendar.models.auction import Auction
+from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
 logger = structlog.get_logger()
 
@@ -144,3 +151,146 @@ def parse_detail_html(html: str) -> dict | None:
         result["end_date"] = end_date
 
     return result if result else None
+
+
+_LISTING_URL = "https://www.publicsurplus.com/sms/browse/cataucs"
+_MAX_PAGES = 20
+_PAGE_DELAY = 0.5
+_MAX_CONCURRENT_DETAIL = 3
+
+_CATEGORY_SALE_TYPES: dict[int, SaleType] = {
+    1506: SaleType.DEED,
+    1505: SaleType.LIEN,
+}
+
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+}
+
+
+class PublicSurplusCollector(BaseCollector):
+    """Collects tax sale and lien auctions from PublicSurplus.com."""
+
+    @property
+    def name(self) -> str:
+        return "publicsurplus"
+
+    @property
+    def source_type(self) -> SourceType:
+        return SourceType.VENDOR
+
+    def normalize(self, raw: dict) -> Auction:
+        county = extract_county(raw["title"])
+        return Auction(
+            state=raw["state"],
+            county=county,
+            start_date=raw["start_date"],
+            end_date=raw.get("end_date"),
+            sale_type=raw["sale_type"],
+            source_type=SourceType.VENDOR,
+            source_url=raw.get("source_url"),
+            confidence_score=0.80,
+            vendor=Vendor.PUBLIC_SURPLUS,
+            notes=raw["title"],
+        )
+
+    async def _fetch(self) -> list[Auction]:
+        async with httpx.AsyncClient(
+            follow_redirects=True, headers=_HEADERS, timeout=30.0
+        ) as client:
+            raw_listings = await self._fetch_all_listings(client)
+            raw_listings = [r for r in raw_listings if r["state"] in US_STATES]
+
+            semaphore = asyncio.Semaphore(_MAX_CONCURRENT_DETAIL)
+            tasks = [
+                self._fetch_detail(client, semaphore, listing)
+                for listing in raw_listings
+            ]
+            enriched = await asyncio.gather(*tasks)
+
+        auctions: list[Auction] = []
+        for entry in enriched:
+            if entry is None or entry.get("start_date") is None:
+                continue
+            try:
+                auctions.append(self.normalize(entry))
+            except (ValidationError, KeyError, TypeError, ValueError) as exc:
+                logger.warning(
+                    "publicsurplus_normalize_failed",
+                    entry=entry,
+                    error=str(exc),
+                )
+
+        logger.info(
+            "publicsurplus_fetch_complete",
+            discovered=len(raw_listings),
+            auctions=len(auctions),
+        )
+        return auctions
+
+    async def _fetch_all_listings(self, client: httpx.AsyncClient) -> list[dict]:
+        all_listings: list[dict] = []
+
+        for catid, sale_type in _CATEGORY_SALE_TYPES.items():
+            page = 0
+            while page < _MAX_PAGES:
+                try:
+                    resp = await client.get(
+                        _LISTING_URL, params={"catid": catid, "page": page}
+                    )
+                    resp.raise_for_status()
+                except httpx.HTTPError as exc:
+                    logger.warning(
+                        "publicsurplus_listing_page_failed",
+                        catid=catid, page=page, error=str(exc),
+                    )
+                    break
+
+                items = parse_listing_html(resp.text)
+                if not items:
+                    break
+
+                for item in items:
+                    item["sale_type"] = sale_type
+                all_listings.extend(items)
+
+                page += 1
+                if page < _MAX_PAGES:
+                    await asyncio.sleep(_PAGE_DELAY)
+
+        return all_listings
+
+    async def _fetch_detail(
+        self, client: httpx.AsyncClient, semaphore: asyncio.Semaphore, listing: dict,
+    ) -> dict | None:
+        async with semaphore:
+            try:
+                resp = await client.get(listing["source_url"])
+                resp.raise_for_status()
+            except httpx.HTTPError as exc:
+                logger.warning(
+                    "publicsurplus_detail_failed",
+                    auction_id=listing["auction_id"], error=str(exc),
+                )
+                if listing.get("end_date"):
+                    listing["start_date"] = listing["end_date"]
+                    return listing
+                return None
+
+            detail = parse_detail_html(resp.text)
+            if detail and detail.get("start_date"):
+                listing["start_date"] = detail["start_date"]
+                if detail.get("end_date"):
+                    listing["end_date"] = detail["end_date"]
+            elif listing.get("end_date"):
+                listing["start_date"] = listing["end_date"]
+            else:
+                return None
+
+            return listing

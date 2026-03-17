@@ -135,3 +135,64 @@ class TestParseDetailHtml:
         assert m is not None
         assert m.group(1) == "3946030"
         assert m.group(2) == "1773846000000"
+
+
+import pytest
+from tdc_auction_calendar.collectors.vendors.publicsurplus import PublicSurplusCollector
+from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
+
+
+class TestPublicSurplusCollector:
+    @pytest.fixture()
+    def collector(self):
+        return PublicSurplusCollector()
+
+    def test_name(self, collector):
+        assert collector.name == "publicsurplus"
+
+    def test_source_type(self, collector):
+        assert collector.source_type == SourceType.VENDOR
+
+    def test_normalize_with_county(self, collector):
+        raw = {
+            "state": "MN",
+            "title": "Tract 4: Norman County Tax-Forfeiture Parcels",
+            "start_date": date(2026, 3, 17),
+            "end_date": date(2026, 3, 19),
+            "sale_type": SaleType.DEED,
+            "source_url": "https://www.publicsurplus.com/sms/auction/view?auc=3860102",
+        }
+        auction = collector.normalize(raw)
+        assert auction.state == "MN"
+        assert auction.county == "Norman"
+        assert auction.start_date == date(2026, 3, 17)
+        assert auction.end_date == date(2026, 3, 19)
+        assert auction.sale_type == SaleType.DEED
+        assert auction.source_type == SourceType.VENDOR
+        assert auction.vendor == Vendor.PUBLIC_SURPLUS
+        assert auction.confidence_score == 0.80
+        assert auction.notes == "Tract 4: Norman County Tax-Forfeiture Parcels"
+
+    def test_normalize_without_county(self, collector):
+        raw = {
+            "state": "MN",
+            "title": "Parcel 2 PIN#26-345-0510",
+            "start_date": date(2026, 3, 21),
+            "end_date": date(2026, 3, 23),
+            "sale_type": SaleType.DEED,
+            "source_url": "https://www.publicsurplus.com/sms/auction/view?auc=3947401",
+        }
+        auction = collector.normalize(raw)
+        assert auction.county == "Various"
+
+    def test_normalize_lien(self, collector):
+        raw = {
+            "state": "FL",
+            "title": "Tax Lien Certificate Sale",
+            "start_date": date(2026, 4, 1),
+            "end_date": None,
+            "sale_type": SaleType.LIEN,
+            "source_url": "https://www.publicsurplus.com/sms/auction/view?auc=9999999",
+        }
+        auction = collector.normalize(raw)
+        assert auction.sale_type == SaleType.LIEN
