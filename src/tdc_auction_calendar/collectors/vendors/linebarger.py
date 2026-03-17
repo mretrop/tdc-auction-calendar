@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import date
 
@@ -19,6 +20,7 @@ logger = structlog.get_logger()
 
 _BASE_URL = "https://taxsales.lgbs.com"
 _API_URL = f"{_BASE_URL}/api/filter_bar/"
+_MAX_PAGES = 50
 
 
 def normalize_county_name(raw: str) -> str:
@@ -39,18 +41,25 @@ def parse_api_response(data: dict) -> list[Auction]:
     Groups by (state, county, sale_date) so multiple precincts on the same
     date in the same county produce one Auction.
     """
+    results = data.get("results", [])
     seen: set[tuple[str, str, date]] = set()
     auctions: list[Auction] = []
+    skipped_cancelled = 0
+    skipped_no_date = 0
+    skipped_bad_date = 0
+    skipped_validation = 0
 
-    for item in data.get("results", []):
+    for item in results:
         # Skip cancelled
         status = item.get("status", "")
         if "cancelled" in status.lower():
+            skipped_cancelled += 1
             continue
 
         # Skip empty/null dates
         raw_date = item.get("sale_date_only")
         if not raw_date:
+            skipped_no_date += 1
             continue
 
         state = item.get("state", "")
@@ -60,6 +69,7 @@ def parse_api_response(data: dict) -> list[Auction]:
         try:
             sale_date = date.fromisoformat(raw_date)
         except (ValueError, TypeError):
+            skipped_bad_date += 1
             logger.warning(
                 "linebarger_date_parse_failed",
                 county=raw_county,
@@ -90,12 +100,20 @@ def parse_api_response(data: dict) -> list[Auction]:
                 )
             )
         except ValidationError as exc:
+            skipped_validation += 1
             logger.warning(
                 "linebarger_validation_failed",
                 county=raw_county,
                 state=state,
                 error=str(exc),
             )
+
+    if skipped_no_date and skipped_no_date == len(results) - skipped_cancelled:
+        logger.error(
+            "linebarger_all_items_missing_date",
+            total=len(results),
+            skipped_no_date=skipped_no_date,
+        )
 
     return auctions
 
@@ -129,17 +147,47 @@ class LinebargerCollector(BaseCollector):
         }
 
         all_results: list[dict] = []
-        url = f"{_API_URL}?limit=1000"
+        url: str | None = f"{_API_URL}?limit=1000"
+        page = 0
 
         try:
             async with httpx.AsyncClient(
                 follow_redirects=True, headers=headers, timeout=30.0
             ) as client:
                 while url:
+                    page += 1
+                    if page > _MAX_PAGES:
+                        logger.error(
+                            "linebarger_pagination_limit_exceeded",
+                            max_pages=_MAX_PAGES,
+                            total_results_so_far=len(all_results),
+                        )
+                        break
+
                     resp = await client.get(url)
                     resp.raise_for_status()
-                    data = resp.json()
-                    all_results.extend(data.get("results", []))
+
+                    try:
+                        data = resp.json()
+                    except json.JSONDecodeError as exc:
+                        raise ScrapeError(
+                            url=url,
+                            attempts=[{
+                                "fetcher": "httpx",
+                                "error": f"Non-JSON response: {resp.text[:200]}",
+                            }],
+                        ) from exc
+
+                    if "results" not in data:
+                        raise ScrapeError(
+                            url=url,
+                            attempts=[{
+                                "fetcher": "httpx",
+                                "error": f"Missing 'results' key in response. Keys: {list(data.keys())}",
+                            }],
+                        )
+
+                    all_results.extend(data["results"])
                     url = data.get("next")
         except httpx.HTTPError as exc:
             raise ScrapeError(
@@ -159,5 +207,6 @@ class LinebargerCollector(BaseCollector):
             "linebarger_fetch_complete",
             total_api_results=len(all_results),
             auctions=len(auctions),
+            pages=page,
         )
         return auctions
