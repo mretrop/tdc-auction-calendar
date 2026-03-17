@@ -1,7 +1,7 @@
 # tests/collectors/vendors/test_publicsurplus.py
 """Tests for PublicSurplus vendor collector."""
 
-from tdc_auction_calendar.collectors.vendors.publicsurplus import extract_county
+from tdc_auction_calendar.collectors.vendors.publicsurplus import US_STATES, extract_county
 
 
 class TestExtractCounty:
@@ -22,3 +22,16 @@ class TestExtractCounty:
 
     def test_empty_string(self):
         assert extract_county("") == "Various"
+
+
+class TestUsStates:
+    def test_contains_all_50_states_plus_dc(self):
+        assert len(US_STATES) == 51  # 50 states + DC
+
+    def test_mn_is_included(self):
+        assert "MN" in US_STATES
+
+    def test_canadian_province_excluded(self):
+        assert "AB" not in US_STATES
+        assert "ON" not in US_STATES
+        assert "BC" not in US_STATES
