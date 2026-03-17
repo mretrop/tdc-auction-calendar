@@ -273,9 +273,9 @@ class TestRunAndPersist:
 
 
 class TestRegistry:
-    def test_registry_has_11_collectors(self):
-        """Registry contains all 11 collectors."""
-        assert len(COLLECTORS) == 11
+    def test_registry_has_12_collectors(self):
+        """Registry contains all 12 collectors."""
+        assert len(COLLECTORS) == 12
 
     def test_registry_keys_match_collector_names(self):
         """Registry keys match each collector's .name property."""
