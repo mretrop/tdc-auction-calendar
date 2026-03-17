@@ -339,3 +339,11 @@ class TestLinebargerCollector:
 
         assert len(auctions) == 2
         assert mock_client.get.call_count == 2
+
+
+from tdc_auction_calendar.collectors.orchestrator import COLLECTORS
+
+
+def test_linebarger_in_orchestrator():
+    assert "linebarger" in COLLECTORS
+    assert COLLECTORS["linebarger"] is LinebargerCollector
