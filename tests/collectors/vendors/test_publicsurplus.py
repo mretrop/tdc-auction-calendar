@@ -3,14 +3,20 @@
 
 from datetime import date
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
+import pytest
 
 from tdc_auction_calendar.collectors.vendors.publicsurplus import (
     US_STATES,
+    PublicSurplusCollector,
     _TIME_LEFT_RE,
     extract_county,
     parse_detail_html,
     parse_listing_html,
 )
+from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -64,6 +70,7 @@ class TestParseListingHtml:
         first = results[0]
         assert first["auction_id"] == "3860102"
         assert first["state"] == "MN"
+        assert not first["title"].startswith("#")
         assert "Norman County" in first["title"]
         assert first["source_url"] == "https://www.publicsurplus.com/sms/auction/view?auc=3860102"
 
@@ -99,6 +106,20 @@ class TestTimeLeftRegex:
         assert m is not None
         assert m.group(1) == "3860102"
 
+    def test_no_match_on_unrelated_js(self):
+        js = 'console.log("hello world");'
+        assert _TIME_LEFT_RE.search(js) is None
+
+    def test_multiline_js_call(self):
+        js = """updateTimeLeftSpan(timeLeftInfoMap, 3946030, "3946030catGrid",
+            1773711883006, 1773846000000, 0, "",
+            "", "catList" , timeLeftCallback);"""
+        m = _TIME_LEFT_RE.search(js)
+        assert m is not None
+        assert m.group(1) == "3946030"
+        assert m.group(2) == "1773846000000"
+
+
 class TestParseDetailHtml:
     def test_extracts_start_date(self):
         html = _load("publicsurplus_detail.html")
@@ -121,27 +142,6 @@ class TestParseDetailHtml:
 
     def test_html_without_dates_returns_none(self):
         assert parse_detail_html("<html><body>No auction here</body></html>") is None
-
-
-    def test_no_match_on_unrelated_js(self):
-        js = 'console.log("hello world");'
-        assert _TIME_LEFT_RE.search(js) is None
-
-    def test_multiline_js_call(self):
-        js = """updateTimeLeftSpan(timeLeftInfoMap, 3946030, "3946030catGrid",
-            1773711883006, 1773846000000, 0, "",
-            "", "catList" , timeLeftCallback);"""
-        m = _TIME_LEFT_RE.search(js)
-        assert m is not None
-        assert m.group(1) == "3946030"
-        assert m.group(2) == "1773846000000"
-
-
-import httpx
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from tdc_auction_calendar.collectors.vendors.publicsurplus import PublicSurplusCollector
-from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
 
 class TestPublicSurplusCollector:
@@ -259,7 +259,8 @@ class TestFetch:
         ):
             auctions = await collector.collect()
 
-        assert len(auctions) > 0
+        # 3 listings × 2 categories = 6 auctions
+        assert len(auctions) == 6
         assert all(a.vendor == Vendor.PUBLIC_SURPLUS for a in auctions)
         assert all(a.source_type == SourceType.VENDOR for a in auctions)
         assert all(a.state in US_STATES for a in auctions)

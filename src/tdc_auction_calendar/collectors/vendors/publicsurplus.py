@@ -212,19 +212,28 @@ class PublicSurplusCollector(BaseCollector):
                 self._fetch_detail(client, semaphore, listing)
                 for listing in raw_listings
             ]
-            enriched = await asyncio.gather(*tasks)
+            enriched = await asyncio.gather(*tasks, return_exceptions=True)
 
         auctions: list[Auction] = []
         for entry in enriched:
+            if isinstance(entry, Exception):
+                logger.error(
+                    "publicsurplus_detail_unexpected_error",
+                    error=repr(entry),
+                    error_type=type(entry).__name__,
+                )
+                continue
             if entry is None or entry.get("start_date") is None:
                 continue
             try:
                 auctions.append(self.normalize(entry))
             except (ValidationError, KeyError, TypeError, ValueError) as exc:
-                logger.warning(
-                    "publicsurplus_normalize_failed",
+                logger.error(
+                    "normalize_failed",
+                    collector=self.name,
                     entry=entry,
                     error=str(exc),
+                    error_type=type(exc).__name__,
                 )
 
         logger.info(
@@ -279,6 +288,12 @@ class PublicSurplusCollector(BaseCollector):
                     auction_id=listing["auction_id"], error=str(exc),
                 )
                 if listing.get("end_date"):
+                    logger.warning(
+                        "publicsurplus_detail_fallback_to_end_date",
+                        auction_id=listing["auction_id"],
+                        reason="detail_fetch_failed",
+                        end_date=str(listing["end_date"]),
+                    )
                     listing["start_date"] = listing["end_date"]
                     return listing
                 return None
@@ -289,6 +304,12 @@ class PublicSurplusCollector(BaseCollector):
                 if detail.get("end_date"):
                     listing["end_date"] = detail["end_date"]
             elif listing.get("end_date"):
+                logger.warning(
+                    "publicsurplus_detail_fallback_to_end_date",
+                    auction_id=listing["auction_id"],
+                    reason="start_date_not_in_detail_html",
+                    end_date=str(listing["end_date"]),
+                )
                 listing["start_date"] = listing["end_date"]
             else:
                 return None
