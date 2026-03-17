@@ -6,15 +6,6 @@ from tdc_auction_calendar.collectors.orchestrator import (
     run_all,
     run_and_persist,
 )
-from tdc_auction_calendar.collectors.public_notices import (
-    FloridaCollector,
-    MinnesotaCollector,
-    NewJerseyCollector,
-    NorthCarolinaCollector,
-    PennsylvaniaCollector,
-    SouthCarolinaCollector,
-    UtahCollector,
-)
 from tdc_auction_calendar.collectors.state_agencies import (
     ArkansasCollector,
     CaliforniaCollector,
@@ -31,17 +22,10 @@ __all__ = [
     "CaliforniaCollector",
     "ColoradoCollector",
     "CountyWebsiteCollector",
-    "FloridaCollector",
     "IowaCollector",
-    "MinnesotaCollector",
-    "NewJerseyCollector",
-    "NorthCarolinaCollector",
-    "PennsylvaniaCollector",
     "PurdueCollector",
     "RealAuctionCollector",
-    "SouthCarolinaCollector",
     "StatutoryCollector",
-    "UtahCollector",
     "cross_dedup",
     "run_all",
     "run_and_persist",

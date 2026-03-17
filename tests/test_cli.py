@@ -309,7 +309,7 @@ class TestCollect:
         mock_run.return_value = _make_report(
             collectors_succeeded=["statutory"],
             collectors_failed=[
-                CollectorError(collector_name="florida_public_notice", error="timeout", error_type="TimeoutError")
+                CollectorError(collector_name="realauction", error="timeout", error_type="TimeoutError")
             ],
         )
         result = runner.invoke(app, ["collect"])

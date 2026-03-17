@@ -9,15 +9,6 @@ from sqlalchemy.orm import Session
 
 from tdc_auction_calendar.collectors.base import BaseCollector
 from tdc_auction_calendar.collectors.county_websites import CountyWebsiteCollector
-from tdc_auction_calendar.collectors.public_notices import (
-    FloridaCollector,
-    MinnesotaCollector,
-    NewJerseyCollector,
-    NorthCarolinaCollector,
-    PennsylvaniaCollector,
-    SouthCarolinaCollector,
-    UtahCollector,
-)
 from tdc_auction_calendar.collectors.state_agencies import (
     ArkansasCollector,
     CaliforniaCollector,
@@ -33,13 +24,6 @@ from tdc_auction_calendar.models.health import CollectorError, RunReport
 logger = structlog.get_logger()
 
 COLLECTORS: dict[str, type[BaseCollector]] = {
-    "florida_public_notice": FloridaCollector,
-    "minnesota_public_notice": MinnesotaCollector,
-    "new_jersey_public_notice": NewJerseyCollector,
-    "north_carolina_public_notice": NorthCarolinaCollector,
-    "pennsylvania_public_notice": PennsylvaniaCollector,
-    "south_carolina_public_notice": SouthCarolinaCollector,
-    "utah_public_notice": UtahCollector,
     "arkansas_state_agency": ArkansasCollector,
     "california_state_agency": CaliforniaCollector,
     "colorado_state_agency": ColoradoCollector,
