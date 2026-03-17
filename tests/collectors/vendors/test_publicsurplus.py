@@ -274,3 +274,20 @@ class TestFetch:
             auctions = await collector.collect()
 
         assert auctions == []
+
+
+@pytest.mark.integration
+class TestLiveIntegration:
+    async def test_collect_returns_auctions(self):
+        """Smoke test against live PublicSurplus site.
+
+        Run with: uv run pytest -m integration -v
+        """
+        collector = PublicSurplusCollector()
+        auctions = await collector.collect()
+        for a in auctions:
+            assert a.state in US_STATES
+            assert a.source_type == SourceType.VENDOR
+            assert a.vendor == Vendor.PUBLIC_SURPLUS
+            assert a.start_date is not None
+            assert a.source_url is not None
