@@ -110,4 +110,4 @@ All four Linebarger sale types (Sale, Resale, Struck-off, Future sale) map to th
 - Test county name normalization (single word, multi-word, edge cases)
 - Test deduplication (same county + date + different precincts → one Auction)
 - Test pagination (mock `next` URL scenario)
-- Test sale type mapping (TX → DEED, PA → LIEN)
+- Test sale type mapping (TX → DEED, PA → DEED)
