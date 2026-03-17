@@ -39,3 +39,4 @@ class Vendor(StrEnum):
     PURDUE = "Purdue, Brandon, Fielder, Collins & Mott"
     MVBA = "McCreary, Veselka, Bragg & Allen"
     PUBLIC_SURPLUS = "PublicSurplus"
+    LINEBARGER = "Linebarger Goggan Blair & Sampson"
