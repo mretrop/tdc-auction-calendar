@@ -8,6 +8,7 @@ from tdc_auction_calendar.collectors.vendors.publicsurplus import (
     US_STATES,
     _TIME_LEFT_RE,
     extract_county,
+    parse_detail_html,
     parse_listing_html,
 )
 
@@ -97,6 +98,30 @@ class TestTimeLeftRegex:
         m = _TIME_LEFT_RE.search(js)
         assert m is not None
         assert m.group(1) == "3860102"
+
+class TestParseDetailHtml:
+    def test_extracts_start_date(self):
+        html = _load("publicsurplus_detail.html")
+        result = parse_detail_html(html)
+        assert result is not None
+        assert "start_date" in result
+        assert isinstance(result["start_date"], date)
+        assert result["start_date"] == date(2026, 3, 4)
+
+    def test_extracts_end_date(self):
+        html = _load("publicsurplus_detail.html")
+        result = parse_detail_html(html)
+        assert result is not None
+        assert "end_date" in result
+        assert isinstance(result["end_date"], date)
+        assert result["end_date"] == date(2026, 3, 18)
+
+    def test_empty_html_returns_none(self):
+        assert parse_detail_html("") is None
+
+    def test_html_without_dates_returns_none(self):
+        assert parse_detail_html("<html><body>No auction here</body></html>") is None
+
 
     def test_no_match_on_unrelated_js(self):
         js = 'console.log("hello world");'
