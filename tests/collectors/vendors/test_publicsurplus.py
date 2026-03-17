@@ -1,7 +1,21 @@
 # tests/collectors/vendors/test_publicsurplus.py
 """Tests for PublicSurplus vendor collector."""
 
-from tdc_auction_calendar.collectors.vendors.publicsurplus import US_STATES, extract_county
+from datetime import date
+from pathlib import Path
+
+from tdc_auction_calendar.collectors.vendors.publicsurplus import (
+    US_STATES,
+    _TIME_LEFT_RE,
+    extract_county,
+    parse_listing_html,
+)
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _load(name: str) -> str:
+    return (FIXTURES / name).read_text()
 
 
 class TestExtractCounty:
@@ -35,3 +49,64 @@ class TestUsStates:
         assert "AB" not in US_STATES
         assert "ON" not in US_STATES
         assert "BC" not in US_STATES
+
+
+class TestParseListingHtml:
+    def test_extracts_three_auctions(self):
+        html = _load("publicsurplus_listing.html")
+        results = parse_listing_html(html)
+        assert len(results) == 3
+
+    def test_auction_fields(self):
+        html = _load("publicsurplus_listing.html")
+        results = parse_listing_html(html)
+        first = results[0]
+        assert first["auction_id"] == "3860102"
+        assert first["state"] == "MN"
+        assert "Norman County" in first["title"]
+        assert first["source_url"] == "https://www.publicsurplus.com/sms/auction/view?auc=3860102"
+
+    def test_extracts_end_date_from_js(self):
+        html = _load("publicsurplus_listing.html")
+        results = parse_listing_html(html)
+        first = results[0]
+        # 1773882000000 ms = 2026-03-19 01:00:00 UTC = 2026-03-19
+        assert first["end_date"] == date(2026, 3, 19)
+
+    def test_state_is_stripped(self):
+        html = _load("publicsurplus_listing.html")
+        results = parse_listing_html(html)
+        for r in results:
+            assert r["state"] == r["state"].strip()
+            assert len(r["state"]) == 2
+
+    def test_empty_html(self):
+        assert parse_listing_html("") == []
+
+
+class TestTimeLeftRegex:
+    def test_standard_js_call(self):
+        js = 'updateTimeLeftSpan(timeLeftInfoMap, 3860102, "3860102catGrid", 1773711883006, 1773882000000, 0, "", "", "catList", timeLeftCallback);'
+        m = _TIME_LEFT_RE.search(js)
+        assert m is not None
+        assert m.group(1) == "3860102"
+        assert m.group(2) == "1773882000000"
+
+    def test_extra_whitespace(self):
+        js = 'updateTimeLeftSpan( timeLeftInfoMap ,  3860102 ,  "3860102catGrid" ,  1773711883006 ,  1773882000000 , 0, "", "", "catList", timeLeftCallback);'
+        m = _TIME_LEFT_RE.search(js)
+        assert m is not None
+        assert m.group(1) == "3860102"
+
+    def test_no_match_on_unrelated_js(self):
+        js = 'console.log("hello world");'
+        assert _TIME_LEFT_RE.search(js) is None
+
+    def test_multiline_js_call(self):
+        js = """updateTimeLeftSpan(timeLeftInfoMap, 3946030, "3946030catGrid",
+            1773711883006, 1773846000000, 0, "",
+            "", "catList" , timeLeftCallback);"""
+        m = _TIME_LEFT_RE.search(js)
+        assert m is not None
+        assert m.group(1) == "3946030"
+        assert m.group(2) == "1773846000000"
