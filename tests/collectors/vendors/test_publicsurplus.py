@@ -137,7 +137,9 @@ class TestParseDetailHtml:
         assert m.group(2) == "1773846000000"
 
 
+import httpx
 import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 from tdc_auction_calendar.collectors.vendors.publicsurplus import PublicSurplusCollector
 from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
@@ -196,3 +198,79 @@ class TestPublicSurplusCollector:
         }
         auction = collector.normalize(raw)
         assert auction.sale_type == SaleType.LIEN
+
+
+def _mock_httpx_response(html: str, status_code: int = 200) -> MagicMock:
+    resp = MagicMock(spec=httpx.Response)
+    resp.status_code = status_code
+    resp.text = html
+    resp.raise_for_status = MagicMock()
+    if status_code >= 400:
+        resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "error", request=MagicMock(), response=resp
+        )
+    return resp
+
+
+class TestFetch:
+    @pytest.fixture()
+    def listing_html(self):
+        return _load("publicsurplus_listing.html")
+
+    @pytest.fixture()
+    def detail_html(self):
+        return _load("publicsurplus_detail.html")
+
+    def _make_mock_client(self, listing_html: str, detail_html: str):
+        """Create a mock httpx client that returns listing for GET with catid params
+        and detail for GET with auction view URLs.
+
+        For listing pages: returns listing_html on the first page request per category,
+        then empty HTML on subsequent pages to end pagination. This correctly handles
+        both catid=1506 and catid=1505 iterations.
+        """
+        mock_client = AsyncMock()
+        listing_calls: dict[tuple, int] = {}
+
+        async def mock_get(url, **kwargs):
+            params = kwargs.get("params", {})
+            if "cataucs" in str(url) or "catid" in str(params):
+                catid = params.get("catid", "unknown")
+                page = params.get("page", 0)
+                key = (catid, page)
+                listing_calls[key] = listing_calls.get(key, 0) + 1
+                if page == 0:
+                    return _mock_httpx_response(listing_html)
+                return _mock_httpx_response("<html></html>")
+            else:
+                return _mock_httpx_response(detail_html)
+
+        mock_client.get = mock_get
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        return mock_client
+
+    async def test_returns_auctions(self, listing_html, detail_html):
+        collector = PublicSurplusCollector()
+        mock_client = self._make_mock_client(listing_html, detail_html)
+        with patch(
+            "tdc_auction_calendar.collectors.vendors.publicsurplus.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            auctions = await collector.collect()
+
+        assert len(auctions) > 0
+        assert all(a.vendor == Vendor.PUBLIC_SURPLUS for a in auctions)
+        assert all(a.source_type == SourceType.VENDOR for a in auctions)
+        assert all(a.state in US_STATES for a in auctions)
+
+    async def test_empty_listings_returns_empty(self):
+        collector = PublicSurplusCollector()
+        mock_client = self._make_mock_client("<html></html>", "<html></html>")
+        with patch(
+            "tdc_auction_calendar.collectors.vendors.publicsurplus.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            auctions = await collector.collect()
+
+        assert auctions == []
