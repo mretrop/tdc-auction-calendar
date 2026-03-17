@@ -6,9 +6,12 @@ from __future__ import annotations
 import re
 from datetime import date
 
+import httpx
 import structlog
 from pydantic import ValidationError
 
+from tdc_auction_calendar.collectors.base import BaseCollector
+from tdc_auction_calendar.collectors.scraping.client import ScrapeError
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
@@ -95,3 +98,66 @@ def parse_api_response(data: dict) -> list[Auction]:
             )
 
     return auctions
+
+
+class LinebargerCollector(BaseCollector):
+    """Collects tax sale auction dates from the Linebarger portal API."""
+
+    @property
+    def name(self) -> str:
+        return "linebarger"
+
+    @property
+    def source_type(self) -> SourceType:
+        return SourceType.VENDOR
+
+    def normalize(self, raw: dict) -> Auction:
+        return Auction(
+            state=raw["state"],
+            county=raw["county"],
+            start_date=raw["start_date"],
+            sale_type=raw["sale_type"],
+            source_type=SourceType.VENDOR,
+            source_url=raw.get("source_url", f"{_BASE_URL}/map"),
+            confidence_score=1.0,
+            vendor=Vendor.LINEBARGER,
+        )
+
+    async def _fetch(self) -> list[Auction]:
+        headers = {
+            "Accept": "application/json",
+        }
+
+        all_results: list[dict] = []
+        url = f"{_API_URL}?limit=1000"
+
+        try:
+            async with httpx.AsyncClient(
+                follow_redirects=True, headers=headers, timeout=30.0
+            ) as client:
+                while url:
+                    resp = await client.get(url)
+                    resp.raise_for_status()
+                    data = await resp.json()
+                    all_results.extend(data.get("results", []))
+                    url = data.get("next")
+        except httpx.HTTPError as exc:
+            raise ScrapeError(
+                url=_API_URL,
+                attempts=[{"fetcher": "httpx", "error": str(exc)}],
+            ) from exc
+
+        combined = {
+            "count": len(all_results),
+            "next": None,
+            "previous": None,
+            "results": all_results,
+        }
+        auctions = parse_api_response(combined)
+
+        logger.info(
+            "linebarger_fetch_complete",
+            total_api_results=len(all_results),
+            auctions=len(auctions),
+        )
+        return auctions

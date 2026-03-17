@@ -202,3 +202,140 @@ class TestParseApiResponse:
         }
         auctions = parse_api_response(data)
         assert len(auctions) == 0
+
+
+from unittest.mock import AsyncMock, patch
+import httpx
+from tdc_auction_calendar.collectors.scraping.client import ScrapeError
+from tdc_auction_calendar.collectors.vendors.linebarger import LinebargerCollector
+
+
+class TestLinebargerCollector:
+    def test_properties(self):
+        collector = LinebargerCollector()
+        assert collector.name == "linebarger"
+        assert collector.source_type == SourceType.VENDOR
+
+    def test_normalize(self):
+        collector = LinebargerCollector()
+        raw = {
+            "state": "TX",
+            "county": "Harris",
+            "start_date": date(2026, 4, 7),
+            "sale_type": SaleType.DEED,
+            "source_url": "https://taxsales.lgbs.com/map?area=TX",
+        }
+        auction = collector.normalize(raw)
+        assert auction.state == "TX"
+        assert auction.county == "Harris"
+        assert auction.start_date == date(2026, 4, 7)
+        assert auction.vendor == Vendor.LINEBARGER
+        assert auction.confidence_score == 1.0
+
+    @pytest.mark.asyncio
+    async def test_fetch_success(self):
+        mock_json = {
+            "count": 2,
+            "next": None,
+            "previous": None,
+            "results": [
+                {
+                    "county": "HARRIS COUNTY",
+                    "state": "TX",
+                    "sale_date_only": "2026-04-07",
+                    "status": "Scheduled for Auction",
+                    "precinct": "1",
+                },
+                {
+                    "county": "PHILADELPHIA COUNTY",
+                    "state": "PA",
+                    "sale_date_only": "2026-03-24",
+                    "status": "Scheduled for Auction",
+                    "precinct": "",
+                },
+            ],
+        }
+        mock_response = AsyncMock()
+        mock_response.json.return_value = mock_json
+        mock_response.raise_for_status = lambda: None
+
+        with patch("tdc_auction_calendar.collectors.vendors.linebarger.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get.return_value = mock_response
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            collector = LinebargerCollector()
+            auctions = await collector._fetch()
+
+        assert len(auctions) == 2
+        counties = {a.county for a in auctions}
+        assert counties == {"Harris", "Philadelphia"}
+
+    @pytest.mark.asyncio
+    async def test_fetch_http_error_raises_scrape_error(self):
+        with patch("tdc_auction_calendar.collectors.vendors.linebarger.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get.side_effect = httpx.HTTPStatusError(
+                "500", request=httpx.Request("GET", "http://test"), response=httpx.Response(500)
+            )
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            collector = LinebargerCollector()
+            with pytest.raises(ScrapeError):
+                await collector._fetch()
+
+    @pytest.mark.asyncio
+    async def test_fetch_follows_pagination(self):
+        page1 = {
+            "count": 2,
+            "next": "https://taxsales.lgbs.com/api/filter_bar/?limit=1000&offset=1000",
+            "previous": None,
+            "results": [
+                {
+                    "county": "HARRIS COUNTY",
+                    "state": "TX",
+                    "sale_date_only": "2026-04-07",
+                    "status": "Scheduled for Auction",
+                    "precinct": "1",
+                },
+            ],
+        }
+        page2 = {
+            "count": 2,
+            "next": None,
+            "previous": "https://taxsales.lgbs.com/api/filter_bar/?limit=1000",
+            "results": [
+                {
+                    "county": "DALLAS COUNTY",
+                    "state": "TX",
+                    "sale_date_only": "2026-04-07",
+                    "status": "Scheduled for Auction",
+                    "precinct": "1",
+                },
+            ],
+        }
+
+        resp1 = AsyncMock()
+        resp1.json.return_value = page1
+        resp1.raise_for_status = lambda: None
+
+        resp2 = AsyncMock()
+        resp2.json.return_value = page2
+        resp2.raise_for_status = lambda: None
+
+        with patch("tdc_auction_calendar.collectors.vendors.linebarger.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get.side_effect = [resp1, resp2]
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            collector = LinebargerCollector()
+            auctions = await collector._fetch()
+
+        assert len(auctions) == 2
+        assert mock_client.get.call_count == 2
