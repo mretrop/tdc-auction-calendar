@@ -136,7 +136,7 @@ def test_all_portal_vendors_represented(seed_data):
     from tdc_auction_calendar.models.enums import Vendor
 
     # Vendors that have their own dedicated collectors, not portal mappings
-    dedicated_collector_vendors = {Vendor.PURDUE, Vendor.MVBA}
+    dedicated_collector_vendors = {Vendor.PURDUE, Vendor.MVBA, Vendor.PUBLIC_SURPLUS}
     portal_vendors = ALLOWED_VENDORS - dedicated_collector_vendors
 
     vendors_present = {e["vendor"] for e in seed_data}
