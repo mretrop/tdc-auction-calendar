@@ -48,6 +48,8 @@ Collectors use a two-tier fetch+extract architecture built on `ScrapeClient`:
 
 Most collectors define a Pydantic schema and extraction prompt. When Cloudflare is primary, extraction happens in a single round trip. When falling back to Crawl4AI, `LLMExtraction` handles extraction as a separate step. Some collectors with stable, structured sources use deterministic parsing instead of LLM extraction (e.g., `ArkansasCollector`, `MVBACollector` use regex; `RealAuctionCollector` uses BeautifulSoup CSS selectors on raw HTML). `Bid4AssetsCollector` bypasses `ScrapeClient` entirely — it uses plain `httpx` because Akamai blocks headless browsers but allows standard HTTP requests. `PublicSurplusCollector` also uses plain `httpx` + BeautifulSoup (no bot protection observed) with a two-pass architecture: listing pages for discovery + JS end-date extraction, then detail pages for start dates. `LinebargerCollector` uses plain `httpx` against the site's REST API (`/api/filter_bar/`) — the AngularJS SPA has a public JSON backend, so no browser rendering needed. `SRICollector` uses plain `httpx` POST against the Azure-hosted REST API (`sriservicesusermgmtprod.azurewebsites.net/api/auction/listall`) with a public API key from the client JS bundle.
 
+**RealAuction uses Crawl4AI directly** (not ScrapeClient) — Cloudflare Browser Rendering doesn't wait long enough for the jQuery/ColdFusion calendar to render. The collector builds its own `ScrapeClient` with `Crawl4AiFetcher` as primary, bypassing Cloudflare auto-detection.
+
 Crawl4AI supports three stealth levels via `StealthLevel` enum: `OFF` (plain browser), `STEALTH` (default — `playwright-stealth` + `magic` mode), `UNDETECTED` (opt-in — adds `UndetectedAdapter` for Akamai-level protection). Collectors targeting bot-protected sites use `create_scrape_client(stealth=StealthLevel.UNDETECTED)`. Note: `magic` mode can interfere with some sites (e.g., RealAuction redirects to splash page) — use `StealthLevel.OFF` when magic causes issues.
 
 Key files: `collectors/scraping/client.py` (orchestrator), `collectors/scraping/fetchers/cloudflare.py`, `collectors/scraping/fetchers/crawl4ai.py`, `collectors/scraping/extraction.py`
@@ -81,6 +83,10 @@ Key files: `collectors/scraping/client.py` (orchestrator), `collectors/scraping/
 - `redemption_period_months` is typically null for deed states, but some (e.g., TX) have statutory redemption periods — this is correct, not a bug
 - `typical_months` uses `list[int]` (1-12), not month name strings — format for humans downstream
 
+## CI/CD
+
+Single GitHub Actions workflow: `.github/workflows/collect-vendors.yml` — runs weekly (Wednesday 4am UTC), collects from all 7 vendor collectors, syncs to Supabase. Statutory, state agency, and county website workflows were removed — only vendor data is needed.
+
 ## Progress
 
-Issues are tracked as GitHub issues organized by milestones (M1–M5). Check `gh issue list` for current status.
+All milestones (M1–M5) complete. Only open issue: #63 (Grant Street/LienHub collector). Data pipeline is operational — 172 vendor auction records across 8 states syncing to Supabase weekly.
