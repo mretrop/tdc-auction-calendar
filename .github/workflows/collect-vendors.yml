@@ -1,21 +1,21 @@
-name: "Collect: State Agencies (daily)"
+name: "Collect: Vendors (weekly)"
 
 on:
   schedule:
-    - cron: "0 4 * * *"  # Daily 4am UTC
+    - cron: "0 4 * * 3"  # Wednesday 4am UTC
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: collect-state-agencies
+  group: collect-vendors
   cancel-in-progress: false
 
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -30,8 +30,6 @@ jobs:
           missing=()
           [ -z "$SUPABASE_URL" ] && missing+=("SUPABASE_URL")
           [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && missing+=("SUPABASE_SERVICE_ROLE_KEY")
-          [ -z "$CLOUDFLARE_ACCOUNT_ID" ] && missing+=("CLOUDFLARE_ACCOUNT_ID")
-          [ -z "$CLOUDFLARE_API_TOKEN" ] && missing+=("CLOUDFLARE_API_TOKEN")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required secrets: ${missing[*]}"
             exit 1
@@ -49,13 +47,16 @@ jobs:
       - name: Install Playwright browsers
         run: uv run playwright install chromium
 
-      - name: Collect state agency auction data
+      - name: Collect vendor auction data
         run: >-
           uv run tdc-auction-calendar collect
-          --collectors arkansas_state_agency
-          --collectors california_state_agency
-          --collectors colorado_state_agency
-          --collectors iowa_state_agency
+          --collectors realauction
+          --collectors bid4assets
+          --collectors purdue_vendor
+          --collectors mvba_vendor
+          --collectors publicsurplus
+          --collectors linebarger
+          --collectors sri
 
       - name: Sync to Supabase
         run: uv run tdc-auction-calendar sync supabase
