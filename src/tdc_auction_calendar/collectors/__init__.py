@@ -13,7 +13,7 @@ from tdc_auction_calendar.collectors.state_agencies import (
     IowaCollector,
 )
 from tdc_auction_calendar.collectors.statutory import StatutoryCollector
-from tdc_auction_calendar.collectors.vendors import LinebargerCollector, PublicSurplusCollector, PurdueCollector, RealAuctionCollector
+from tdc_auction_calendar.collectors.vendors import LinebargerCollector, PublicSurplusCollector, PurdueCollector, RealAuctionCollector, SRICollector
 
 __all__ = [
     "ArkansasCollector",
@@ -27,6 +27,7 @@ __all__ = [
     "PublicSurplusCollector",
     "PurdueCollector",
     "RealAuctionCollector",
+    "SRICollector",
     "StatutoryCollector",
     "cross_dedup",
     "run_all",
