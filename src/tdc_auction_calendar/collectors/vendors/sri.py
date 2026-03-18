@@ -100,6 +100,13 @@ def parse_api_response(data: list[dict]) -> list[Auction]:
                 error=str(exc),
             )
 
+    if skipped_no_date and skipped_no_date == len(data) - skipped_type:
+        logger.error(
+            "sri_all_items_missing_date",
+            total=len(data),
+            skipped_no_date=skipped_no_date,
+        )
+
     return auctions
 
 
