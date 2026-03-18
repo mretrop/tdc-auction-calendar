@@ -161,3 +161,180 @@ class TestParseApiResponse:
         ]
         auctions = parse_api_response(data)
         assert len(auctions) == 0
+
+
+class TestSRICollector:
+    def test_properties(self):
+        collector = SRICollector()
+        assert collector.name == "sri"
+        assert collector.source_type == SourceType.VENDOR
+
+    def test_normalize(self):
+        collector = SRICollector()
+        raw = {
+            "state": "IN",
+            "county": "Marion",
+            "start_date": date(2026, 4, 7),
+            "sale_type": SaleType.DEED,
+        }
+        auction = collector.normalize(raw)
+        assert auction.state == "IN"
+        assert auction.county == "Marion"
+        assert auction.start_date == date(2026, 4, 7)
+        assert auction.vendor == Vendor.SRI
+        assert auction.confidence_score == 1.0
+        assert auction.source_url == "https://sriservices.com/properties"
+
+    @pytest.mark.asyncio
+    async def test_fetch_success(self):
+        mock_json = [
+            {
+                "id": 100,
+                "saleTypeCode": "A",
+                "county": "Marion",
+                "state": "IN",
+                "auctionDate": "2026-04-07T10:00:00",
+            },
+            {
+                "id": 101,
+                "saleTypeCode": "F",
+                "county": "Fulton",
+                "state": "IN",
+                "auctionDate": "2026-04-07T10:00:00",
+            },
+            {
+                "id": 102,
+                "saleTypeCode": "C",
+                "county": "LaPorte",
+                "state": "IN",
+                "auctionDate": "2026-04-08T10:00:00",
+            },
+        ]
+        mock_response = MagicMock()
+        mock_response.json.return_value = mock_json
+        mock_response.raise_for_status = MagicMock()
+        mock_response.status_code = 200
+
+        with patch("tdc_auction_calendar.collectors.vendors.sri.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post.return_value = mock_response
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            collector = SRICollector()
+            auctions = await collector._fetch()
+
+        # Only A and C kept, F filtered
+        assert len(auctions) == 2
+        counties = {a.county for a in auctions}
+        assert counties == {"Marion", "LaPorte"}
+
+    @pytest.mark.asyncio
+    async def test_fetch_sends_correct_request(self):
+        """Verify POST body and headers are correct."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = []
+        mock_response.raise_for_status = MagicMock()
+        mock_response.status_code = 200
+
+        with patch("tdc_auction_calendar.collectors.vendors.sri.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post.return_value = mock_response
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            collector = SRICollector()
+            await collector._fetch()
+
+        call_args = mock_client.post.call_args
+        assert call_args[0][0] == "https://sriservicesusermgmtprod.azurewebsites.net/api/auction/listall"
+        body = call_args[1]["json"]
+        assert body["recordCount"] == 500
+        assert body["auctionDateRange"]["compareOperator"] == ">"
+        assert body["auctionDateRange"]["startDate"]  # non-empty date string
+        headers = call_args[1]["headers"]
+        assert headers["x-api-key"] == "9f8fd9fe5160294175e1c737567030f495d838a7922a678bc06e0a093910"
+
+    @pytest.mark.asyncio
+    async def test_fetch_http_error_raises_scrape_error(self):
+        with patch("tdc_auction_calendar.collectors.vendors.sri.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post.side_effect = httpx.HTTPStatusError(
+                "500", request=httpx.Request("POST", "http://test"), response=httpx.Response(500)
+            )
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            collector = SRICollector()
+            with pytest.raises(ScrapeError):
+                await collector._fetch()
+
+    @pytest.mark.asyncio
+    async def test_fetch_timeout_raises_scrape_error(self):
+        with patch("tdc_auction_calendar.collectors.vendors.sri.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post.side_effect = httpx.TimeoutException("Connection timed out")
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            collector = SRICollector()
+            with pytest.raises(ScrapeError):
+                await collector._fetch()
+
+    @pytest.mark.asyncio
+    async def test_fetch_json_decode_error_raises_scrape_error(self):
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.side_effect = json.JSONDecodeError("Expecting value", "", 0)
+        mock_response.text = "<html>Server Error</html>"
+
+        with patch("tdc_auction_calendar.collectors.vendors.sri.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post.return_value = mock_response
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            collector = SRICollector()
+            with pytest.raises(ScrapeError):
+                await collector._fetch()
+
+    @pytest.mark.asyncio
+    async def test_fetch_non_list_response_raises_scrape_error(self):
+        """API returning non-list JSON (e.g. error object) is caught."""
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"error": "something went wrong"}
+
+        with patch("tdc_auction_calendar.collectors.vendors.sri.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post.return_value = mock_response
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            collector = SRICollector()
+            with pytest.raises(ScrapeError):
+                await collector._fetch()
+
+    @pytest.mark.asyncio
+    async def test_fetch_api_key_error_raises_scrape_error(self):
+        """401/403 from API key issues raises ScrapeError."""
+        with patch("tdc_auction_calendar.collectors.vendors.sri.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post.side_effect = httpx.HTTPStatusError(
+                "401", request=httpx.Request("POST", "http://test"), response=httpx.Response(401)
+            )
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            collector = SRICollector()
+            with pytest.raises(ScrapeError):
+                await collector._fetch()
