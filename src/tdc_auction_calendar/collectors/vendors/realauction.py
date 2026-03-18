@@ -10,8 +10,10 @@ from bs4 import BeautifulSoup
 from pydantic import ValidationError
 
 from tdc_auction_calendar.collectors.base import BaseCollector
-from tdc_auction_calendar.collectors.scraping import create_scrape_client, StealthLevel
-from tdc_auction_calendar.collectors.scraping.client import ScrapeError
+from tdc_auction_calendar.collectors.scraping.client import ScrapeClient, ScrapeError
+from tdc_auction_calendar.collectors.scraping.cache import ResponseCache
+from tdc_auction_calendar.collectors.scraping.fetchers.crawl4ai import Crawl4AiFetcher, StealthLevel
+from tdc_auction_calendar.collectors.scraping.rate_limiter import RateLimiter
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
 
@@ -164,9 +166,14 @@ class RealAuctionCollector(BaseCollector):
         return SourceType.VENDOR
 
     async def _fetch(self) -> list[Auction]:
-        # magic=False is required — Crawl4AI's magic mode triggers the splash page
-        # redirect on RealAuction portals. StealthLevel.OFF disables magic.
-        client = create_scrape_client(stealth=StealthLevel.OFF)
+        # Force Crawl4AI — Cloudflare Browser Rendering doesn't wait long enough
+        # for RealAuction's jQuery/ColdFusion calendar to render.
+        # StealthLevel.OFF required — magic mode triggers splash page redirect.
+        client = ScrapeClient(
+            primary=Crawl4AiFetcher(stealth=StealthLevel.OFF),
+            rate_limiter=RateLimiter(default_delay=2.0),
+            cache=ResponseCache(cache_dir="data/cache", ttl=21600),
+        )
         semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
 
         async def _fetch_one(state: str, county: str, base_url: str, url: str) -> list[Auction]:

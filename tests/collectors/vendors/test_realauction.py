@@ -229,7 +229,7 @@ async def test_fetch_returns_auctions(collector):
 
     with (
         patch(
-            "tdc_auction_calendar.collectors.vendors.realauction.create_scrape_client",
+            "tdc_auction_calendar.collectors.vendors.realauction.ScrapeClient",
             return_value=mock_client,
         ),
         patch(
@@ -252,7 +252,7 @@ async def test_fetch_empty_html_returns_empty(collector):
 
     with (
         patch(
-            "tdc_auction_calendar.collectors.vendors.realauction.create_scrape_client",
+            "tdc_auction_calendar.collectors.vendors.realauction.ScrapeClient",
             return_value=mock_client,
         ),
         patch(
@@ -279,7 +279,7 @@ async def test_fetch_partial_failure_continues(collector):
 
     with (
         patch(
-            "tdc_auction_calendar.collectors.vendors.realauction.create_scrape_client",
+            "tdc_auction_calendar.collectors.vendors.realauction.ScrapeClient",
             return_value=mock_client,
         ),
         patch(
@@ -304,7 +304,7 @@ async def test_fetch_mixed_portal_filters_foreclosure(collector):
 
     with (
         patch(
-            "tdc_auction_calendar.collectors.vendors.realauction.create_scrape_client",
+            "tdc_auction_calendar.collectors.vendors.realauction.ScrapeClient",
             return_value=mock_client,
         ),
         patch(
