@@ -324,6 +324,7 @@ class TestSRICollector:
                 await collector._fetch()
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_fetch_api_key_error_raises_scrape_error(self):
         """401/403 from API key issues raises ScrapeError."""
         with patch("tdc_auction_calendar.collectors.vendors.sri.httpx.AsyncClient") as mock_client_cls:
@@ -338,3 +339,13 @@ class TestSRICollector:
             collector = SRICollector()
             with pytest.raises(ScrapeError):
                 await collector._fetch()
+
+
+def test_sri_in_orchestrator():
+    from tdc_auction_calendar.collectors.orchestrator import COLLECTORS
+    assert "sri" in COLLECTORS
+    assert COLLECTORS["sri"] is SRICollector
+
+
+def test_sri_vendor_exists():
+    assert Vendor.SRI == "SRI"

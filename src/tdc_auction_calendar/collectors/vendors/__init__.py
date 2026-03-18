@@ -4,5 +4,6 @@ from tdc_auction_calendar.collectors.vendors.mvba import MVBACollector
 from tdc_auction_calendar.collectors.vendors.publicsurplus import PublicSurplusCollector
 from tdc_auction_calendar.collectors.vendors.purdue import PurdueCollector
 from tdc_auction_calendar.collectors.vendors.realauction import RealAuctionCollector
+from tdc_auction_calendar.collectors.vendors.sri import SRICollector
 
-__all__ = ["Bid4AssetsCollector", "LinebargerCollector", "MVBACollector", "PublicSurplusCollector", "PurdueCollector", "RealAuctionCollector"]
+__all__ = ["Bid4AssetsCollector", "LinebargerCollector", "MVBACollector", "PublicSurplusCollector", "PurdueCollector", "RealAuctionCollector", "SRICollector"]
