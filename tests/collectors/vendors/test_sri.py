@@ -377,6 +377,20 @@ def test_build_source_url():
     assert url == "https://sriservices.com/properties?state=FL&saleType=redemption&county=St.+Johns&modal=auctionList"
 
 
+def test_build_source_url_all_sale_types():
+    """All four mapped sale type codes produce the correct URL label."""
+    assert "saleType=tax" in _build_source_url("IN", "Marion", "A")
+    assert "saleType=redemption" in _build_source_url("FL", "Marion", "C")
+    assert "saleType=deed" in _build_source_url("TN", "Davidson", "D")
+    assert "saleType=adjudicated" in _build_source_url("LA", "Allen", "J")
+
+
+def test_sale_type_maps_in_sync():
+    """_SALE_TYPE_MAP and _URL_SALE_TYPE must have identical keys."""
+    from tdc_auction_calendar.collectors.vendors.sri import _SALE_TYPE_MAP, _URL_SALE_TYPE
+    assert _SALE_TYPE_MAP.keys() == _URL_SALE_TYPE.keys()
+
+
 def test_sri_in_orchestrator():
     from tdc_auction_calendar.collectors.orchestrator import COLLECTORS
     assert "sri" in COLLECTORS

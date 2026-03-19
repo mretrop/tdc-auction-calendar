@@ -42,7 +42,15 @@ _URL_SALE_TYPE: dict[str, str] = {
 
 def _build_source_url(state: str, county: str, sale_type_code: str) -> str:
     """Build a deep link to the SRI auction list filtered by state/county/type."""
-    sale_label = _URL_SALE_TYPE.get(sale_type_code, "")
+    sale_label = _URL_SALE_TYPE.get(sale_type_code)
+    if sale_label is None:
+        logger.warning(
+            "sri_unknown_sale_type_for_url",
+            sale_type_code=sale_type_code,
+            state=state,
+            county=county,
+        )
+        sale_label = ""
     county_encoded = quote_plus(county)
     return f"{_SOURCE_URL}?state={state}&saleType={sale_label}&county={county_encoded}&modal=auctionList"
 

@@ -51,6 +51,20 @@ def test_parse_extracts_urls():
     )
 
 
+def test_parse_entry_without_url():
+    """County entries without a URL should return None as the third element."""
+    md = """\
+## April Tax Sales (Tuesday, April 7, 2026)
+
+* [Travis County]
+* [Eastland County](https://mvbalaw.com/wp-content/TaxUploads/0426_Eastland.pdf)
+"""
+    results = parse_monthly_sales(md)
+    assert len(results) == 2
+    assert results[0] == (date(2026, 4, 7), "Travis", None)
+    assert results[1][2] == "https://mvbalaw.com/wp-content/TaxUploads/0426_Eastland.pdf"
+
+
 def test_parse_strips_parenthetical_suffixes():
     """County names like 'Harrison County (MVBA Online Auction)' should extract just 'Harrison'."""
     results = parse_monthly_sales(SAMPLE_MARKDOWN)

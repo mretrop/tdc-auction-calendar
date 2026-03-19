@@ -219,7 +219,7 @@ class RealAuctionCollector(BaseCollector):
                     }
                     try:
                         auctions.append(self.normalize(raw))
-                    except (KeyError, TypeError, ValueError, ValidationError) as exc:
+                    except (KeyError, TypeError, ValueError, AttributeError, ValidationError) as exc:
                         logger.error(
                             "realauction_normalize_failed",
                             raw=raw,
