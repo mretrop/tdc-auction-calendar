@@ -29,15 +29,16 @@ _HEADING_RE = re.compile(
 )
 
 # Matches county links: "* [Eastland County](url)" or "* [Harrison County (MVBA Online Auction)](url)"
+# URL group is optional — some entries may lack a link
 _COUNTY_RE = re.compile(
-    r"^\*\s+\[([A-Za-z\s]+?)\s+County(?:\s*\([^)]*\))?\]",
+    r"^\*\s+\[([A-Za-z\s]+?)\s+County(?:\s*\([^)]*\))?\](?:\(([^)]+)\))?",
     re.MULTILINE,
 )
 
 
-def parse_monthly_sales(markdown: str) -> list[tuple[date, str]]:
-    """Parse MVBA monthly sales markdown into (sale_date, county_name) tuples."""
-    results: list[tuple[date, str]] = []
+def parse_monthly_sales(markdown: str) -> list[tuple[date, str, str | None]]:
+    """Parse MVBA monthly sales markdown into (sale_date, county_name, url) tuples."""
+    results: list[tuple[date, str, str | None]] = []
 
     # Find all heading positions
     headings = list(_HEADING_RE.finditer(markdown))
@@ -62,7 +63,10 @@ def parse_monthly_sales(markdown: str) -> list[tuple[date, str]]:
 
         for county_match in _COUNTY_RE.finditer(section):
             county_name = county_match.group(1).strip()
-            results.append((sale_date, county_name))
+            county_url = county_match.group(2)
+            if county_url:
+                county_url = county_url.strip()
+            results.append((sale_date, county_name, county_url))
 
     return results
 
@@ -97,8 +101,12 @@ class MVBACollector(BaseCollector):
             )
 
         auctions: list[Auction] = []
-        for sale_date, county in entries:
-            raw = {"county": county, "date": sale_date.isoformat()}
+        for sale_date, county, county_url in entries:
+            raw = {
+                "county": county,
+                "date": sale_date.isoformat(),
+                "source_url": county_url or _SOURCE_URL,
+            }
             try:
                 auctions.append(self.normalize(raw))
             except (KeyError, TypeError, ValueError, ValidationError) as exc:
@@ -118,7 +126,7 @@ class MVBACollector(BaseCollector):
             start_date=date.fromisoformat(raw["date"]),
             sale_type=SaleType.DEED,
             source_type=SourceType.VENDOR,
-            source_url=_SOURCE_URL,
+            source_url=raw.get("source_url", _SOURCE_URL),
             confidence_score=0.90,
             vendor=Vendor.MVBA,
         )
