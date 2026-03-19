@@ -203,6 +203,11 @@ class RealAuctionCollector(BaseCollector):
                 entries = parse_calendar_html(html)
                 auctions: list[Auction] = []
                 for entry in entries:
+                    preview_url = (
+                        f"{base_url}/index.cfm?zaction=AUCTION"
+                        f"&Zmethod=PREVIEW"
+                        f"&AUCTIONDATE={entry['date'].strftime('%m/%d/%Y')}"
+                    )
                     raw = {
                         "state": state,
                         "county": county,
@@ -210,7 +215,7 @@ class RealAuctionCollector(BaseCollector):
                         "sale_type": entry["sale_type"],
                         "property_count": entry["property_count"],
                         "time": entry["time"],
-                        "source_url": url,
+                        "source_url": preview_url,
                     }
                     try:
                         auctions.append(self.normalize(raw))

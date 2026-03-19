@@ -172,7 +172,7 @@ def test_normalize_tax_deed(collector):
         "sale_type": "Tax Deed",
         "property_count": 13,
         "time": "10:00 AM ET",
-        "source_url": "https://hillsborough.realtaxdeed.com/index.cfm?zaction=user&zmethod=calendar",
+        "source_url": "https://hillsborough.realtaxdeed.com/index.cfm?zaction=AUCTION&Zmethod=PREVIEW&AUCTIONDATE=03/05/2026",
     }
     auction = collector.normalize(raw)
     assert auction.state == "FL"
@@ -194,7 +194,7 @@ def test_normalize_treasurer_deed(collector):
         "sale_type": "Treasurer Deed",
         "property_count": 5,
         "time": "10:00 AM MT",
-        "source_url": "https://denver.treasurersdeedsale.realtaxdeed.com/index.cfm?zaction=user&zmethod=calendar",
+        "source_url": "https://denver.treasurersdeedsale.realtaxdeed.com/index.cfm?zaction=AUCTION&Zmethod=PREVIEW&AUCTIONDATE=04/15/2026",
     }
     auction = collector.normalize(raw)
     assert auction.sale_type == SaleType.DEED
@@ -317,3 +317,44 @@ async def test_fetch_mixed_portal_filters_foreclosure(collector):
     assert len(auctions) == 1
     assert auctions[0].county == "Miami-Dade"
     assert auctions[0].sale_type == SaleType.DEED
+
+
+def test_normalize_source_url_is_preview_link(collector):
+    raw = {
+        "state": "FL",
+        "county": "Hillsborough",
+        "date": "2026-03-05",
+        "sale_type": "Tax Deed",
+        "property_count": 13,
+        "time": "10:00 AM ET",
+        "source_url": "https://hillsborough.realtaxdeed.com/index.cfm?zaction=AUCTION&Zmethod=PREVIEW&AUCTIONDATE=03/05/2026",
+    }
+    auction = collector.normalize(raw)
+    assert auction.source_url == "https://hillsborough.realtaxdeed.com/index.cfm?zaction=AUCTION&Zmethod=PREVIEW&AUCTIONDATE=03/05/2026"
+
+
+async def test_fetch_source_url_is_preview_link(collector):
+    html = _load("realauction_hillsborough_march.html")
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(html)
+    mock_client.close = AsyncMock()
+
+    with (
+        patch(
+            "tdc_auction_calendar.collectors.vendors.realauction.ScrapeClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "tdc_auction_calendar.collectors.vendors.realauction.SITES",
+            [("FL", "Hillsborough", "https://hillsborough.realtaxdeed.com")],
+        ),
+    ):
+        auctions = await collector.collect()
+
+    assert len(auctions) >= 1
+    for a in auctions:
+        assert "zaction=AUCTION" in a.source_url
+        assert "Zmethod=PREVIEW" in a.source_url
+        assert "AUCTIONDATE=" in a.source_url
+        # Should NOT be the calendar URL
+        assert "zaction=user" not in a.source_url
