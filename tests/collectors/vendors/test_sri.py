@@ -11,6 +11,7 @@ import pytest
 from tdc_auction_calendar.collectors.scraping.client import ScrapeError
 from tdc_auction_calendar.collectors.vendors.sri import (
     SRICollector,
+    _build_source_url,
     parse_api_response,
 )
 from tdc_auction_calendar.models.enums import SaleType, SourceType, Vendor
@@ -57,7 +58,10 @@ class TestParseApiResponse:
         assert marion.vendor == Vendor.SRI
         assert marion.confidence_score == 1.0
         assert marion.source_type == SourceType.VENDOR
-        assert marion.source_url == "https://sriservices.com/properties"
+        assert "sriservices.com/properties?" in marion.source_url
+        assert "state=IN" in marion.source_url
+        assert "county=Marion" in marion.source_url
+        assert "modal=auctionList" in marion.source_url
 
     def test_filters_excluded_sale_types(self):
         """Only A, C, D, J are kept. F, R, B, O are excluded."""
@@ -162,6 +166,33 @@ class TestParseApiResponse:
         auctions = parse_api_response(data)
         assert len(auctions) == 0
 
+    def test_source_url_is_deep_link(self):
+        data = [
+            {
+                "id": 100,
+                "saleTypeCode": "A",
+                "county": "Marion",
+                "state": "IN",
+                "auctionDate": "2026-04-07T10:00:00",
+            },
+        ]
+        auctions = parse_api_response(data)
+        assert len(auctions) == 1
+        assert auctions[0].source_url == "https://sriservices.com/properties?state=IN&saleType=tax&county=Marion&modal=auctionList"
+
+    def test_source_url_encodes_county(self):
+        data = [
+            {
+                "id": 100,
+                "saleTypeCode": "C",
+                "county": "St. Johns",
+                "state": "FL",
+                "auctionDate": "2026-04-07T10:00:00",
+            },
+        ]
+        auctions = parse_api_response(data)
+        assert auctions[0].source_url == "https://sriservices.com/properties?state=FL&saleType=redemption&county=St.+Johns&modal=auctionList"
+
 
 class TestSRICollector:
     def test_properties(self):
@@ -176,6 +207,7 @@ class TestSRICollector:
             "county": "Marion",
             "start_date": date(2026, 4, 7),
             "sale_type": SaleType.DEED,
+            "source_url": "https://sriservices.com/properties?state=IN&saleType=tax&county=Marion&modal=auctionList",
         }
         auction = collector.normalize(raw)
         assert auction.state == "IN"
@@ -183,7 +215,7 @@ class TestSRICollector:
         assert auction.start_date == date(2026, 4, 7)
         assert auction.vendor == Vendor.SRI
         assert auction.confidence_score == 1.0
-        assert auction.source_url == "https://sriservices.com/properties"
+        assert "state=IN" in auction.source_url
 
     @pytest.mark.asyncio
     async def test_fetch_success(self):
@@ -338,6 +370,11 @@ class TestSRICollector:
             collector = SRICollector()
             with pytest.raises(ScrapeError):
                 await collector._fetch()
+
+
+def test_build_source_url():
+    url = _build_source_url("FL", "St. Johns", "C")
+    assert url == "https://sriservices.com/properties?state=FL&saleType=redemption&county=St.+Johns&modal=auctionList"
 
 
 def test_sri_in_orchestrator():

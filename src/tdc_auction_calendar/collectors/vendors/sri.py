@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime
+from urllib.parse import quote_plus
 
 import httpx
 import structlog
@@ -29,6 +30,21 @@ _SALE_TYPE_MAP: dict[str, SaleType] = {
     "D": SaleType.DEED,   # Deed Sale
     "J": SaleType.DEED,   # Adjudicated Sale
 }
+
+# Maps saleTypeCode to the URL filter label used on sriservices.com
+_URL_SALE_TYPE: dict[str, str] = {
+    "A": "tax",
+    "C": "redemption",
+    "D": "deed",
+    "J": "adjudicated",
+}
+
+
+def _build_source_url(state: str, county: str, sale_type_code: str) -> str:
+    """Build a deep link to the SRI auction list filtered by state/county/type."""
+    sale_label = _URL_SALE_TYPE.get(sale_type_code, "")
+    county_encoded = quote_plus(county)
+    return f"{_SOURCE_URL}?state={state}&saleType={sale_label}&county={county_encoded}&modal=auctionList"
 
 
 def parse_api_response(data: list[dict]) -> list[Auction]:
@@ -86,7 +102,7 @@ def parse_api_response(data: list[dict]) -> list[Auction]:
                     start_date=auction_date,
                     sale_type=sale_type,
                     source_type=SourceType.VENDOR,
-                    source_url=_SOURCE_URL,
+                    source_url=_build_source_url(state, county, code),
                     confidence_score=1.0,
                     vendor=Vendor.SRI,
                 )
@@ -128,7 +144,7 @@ class SRICollector(BaseCollector):
             start_date=raw["start_date"],
             sale_type=raw["sale_type"],
             source_type=SourceType.VENDOR,
-            source_url=_SOURCE_URL,
+            source_url=raw.get("source_url", _SOURCE_URL),
             confidence_score=1.0,
             vendor=Vendor.SRI,
         )
