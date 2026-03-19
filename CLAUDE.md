@@ -89,4 +89,4 @@ Single GitHub Actions workflow: `.github/workflows/collect-vendors.yml` — runs
 
 ## Progress
 
-All milestones (M1–M5) complete. Only open issue: #63 (Grant Street/LienHub collector). Data pipeline is operational — 172 vendor auction records across 8 states syncing to Supabase weekly.
+All milestones (M1–M5) complete. Only open issue: #63 (Grant Street/LienHub collector). Data pipeline is operational — vendor auction records across 8 states syncing to Supabase weekly. Source links are deep-linked where possible (RealAuction preview pages, MVBA per-county PDFs, SRI filtered auction lists).
