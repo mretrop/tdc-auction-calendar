@@ -35,6 +35,22 @@ def test_parse_extracts_date_and_counties():
     assert counties == ["Eastland", "Harrison", "Hill", "Medina"]
 
 
+def test_parse_extracts_urls():
+    results = parse_monthly_sales(SAMPLE_MARKDOWN)
+    assert len(results) == 4
+    # Each result is now (date, county, url)
+    assert results[0] == (
+        date(2026, 4, 7),
+        "Eastland",
+        "https://mvbalaw.com/wp-content/TaxUploads/0426_Eastland.pdf",
+    )
+    assert results[1] == (
+        date(2026, 4, 7),
+        "Harrison",
+        "https://www.mvbataxsales.com/auction/harrison-county-online-property-tax-sale-april-7-2026-171/bidgallery/",
+    )
+
+
 def test_parse_strips_parenthetical_suffixes():
     """County names like 'Harrison County (MVBA Online Auction)' should extract just 'Harrison'."""
     results = parse_monthly_sales(SAMPLE_MARKDOWN)
@@ -57,8 +73,8 @@ def test_parse_multiple_months():
 """
     results = parse_monthly_sales(md)
     assert len(results) == 3
-    march = [(d, c) for d, c in results if d == date(2026, 3, 3)]
-    april = [(d, c) for d, c in results if d == date(2026, 4, 7)]
+    march = [(d, c, u) for d, c, u in results if d == date(2026, 3, 3)]
+    april = [(d, c, u) for d, c, u in results if d == date(2026, 4, 7)]
     assert len(march) == 1
     assert march[0][1] == "Dallas"
     assert len(april) == 2
@@ -82,7 +98,7 @@ def test_parse_day_name_variations():
 """
     results = parse_monthly_sales(md)
     assert len(results) == 1
-    assert results[0] == (date(2026, 5, 6), "Travis")
+    assert results[0][:2] == (date(2026, 5, 6), "Travis")
 
 
 @pytest.fixture()
@@ -102,6 +118,7 @@ def test_normalize(collector):
     raw = {
         "county": "Eastland",
         "date": "2026-04-07",
+        "source_url": "https://mvbalaw.com/wp-content/TaxUploads/0426_Eastland.pdf",
     }
     auction = collector.normalize(raw)
     assert auction.state == "TX"
@@ -111,7 +128,16 @@ def test_normalize(collector):
     assert auction.source_type == SourceType.VENDOR
     assert auction.confidence_score == 0.90
     assert auction.vendor == Vendor.MVBA
-    assert "mvbalaw.com" in auction.source_url
+    assert auction.source_url == "https://mvbalaw.com/wp-content/TaxUploads/0426_Eastland.pdf"
+
+
+def test_normalize_fallback_source_url(collector):
+    raw = {
+        "county": "Eastland",
+        "date": "2026-04-07",
+    }
+    auction = collector.normalize(raw)
+    assert auction.source_url == "https://mvbalaw.com/tax-sales/month-sales/"
 
 
 def test_normalize_missing_county_raises(collector):
@@ -150,7 +176,7 @@ def test_parse_invalid_date_skips_section():
 """
     results = parse_monthly_sales(md)
     assert len(results) == 1
-    assert results[0] == (date(2026, 5, 6), "Travis")
+    assert results[0][:2] == (date(2026, 5, 6), "Travis")
 
 
 # ── _fetch integration tests ─────────────────────────────────────────
@@ -210,3 +236,21 @@ async def test_fetch_none_markdown_returns_empty(collector):
         auctions = await collector.collect()
 
     assert auctions == []
+
+
+async def test_fetch_uses_county_urls(collector):
+    mock_client = AsyncMock()
+    mock_client.scrape.return_value = _mock_scrape_result(SAMPLE_MARKDOWN)
+    mock_client.close = AsyncMock()
+
+    with patch(
+        "tdc_auction_calendar.collectors.vendors.mvba.create_scrape_client",
+        return_value=mock_client,
+    ):
+        auctions = await collector.collect()
+
+    eastland = next(a for a in auctions if a.county == "Eastland")
+    assert eastland.source_url == "https://mvbalaw.com/wp-content/TaxUploads/0426_Eastland.pdf"
+
+    harrison = next(a for a in auctions if a.county == "Harrison")
+    assert "mvbataxsales.com" in harrison.source_url
