@@ -1,50 +1,56 @@
-"""Arkansas state agency collector — COSL tax deed sales."""
+"""Arkansas state agency collector — COSL tax deed sales.
+
+Uses plain httpx + BeautifulSoup to parse the Public Auction Catalog at
+cosl.org/Home/Contents. The page is server-rendered HTML (ASP.NET MVC) with
+sale dates and counties in a Bootstrap grid layout.
+"""
 
 from __future__ import annotations
 
 import re
 from datetime import date, datetime
 
+import httpx
 import structlog
+from bs4 import BeautifulSoup
 from pydantic import ValidationError
 
 from tdc_auction_calendar.collectors.base import BaseCollector
-from tdc_auction_calendar.collectors.scraping import create_scrape_client
 from tdc_auction_calendar.models.auction import Auction
 from tdc_auction_calendar.models.enums import SaleType, SourceType
 
 logger = structlog.get_logger()
 
-_URL = "https://www.cosl.org/Home/Contents"
-
-_DATE_RE = re.compile(r"\b(\d{1,2}/\d{1,2}/\d{4})\b")
-_COUNTY_RE = re.compile(r"\[\s*([A-Z ]+?)\s*\]\(#\)")
+_URL = "https://cosl.org/Home/Contents"
+_DATE_RE = re.compile(r"(\d{1,2}/\d{1,2}/\d{4})")
 
 
-def parse_catalog(markdown: str) -> list[dict]:
-    """Extract (sale_date, county) pairs from COSL catalog markdown.
+def parse_catalog(html: str) -> list[dict]:
+    """Extract (sale_date, county) pairs from COSL catalog HTML.
 
-    Walks lines sequentially. A date line sets current_date; each subsequent
-    county link line emits a record pairing that date with the county (title-cased).
-    Counties appearing before any date line are skipped.
+    Each data row is a ``div.row`` whose first ``div.col-sm`` child contains a
+    date like ``7/9/2026 12:00 AM``.  Counties appear as ``a.dropdown-toggle``
+    links within the same row.
     """
+    soup = BeautifulSoup(html, "html.parser")
     records: list[dict] = []
-    current_date: str | None = None
 
-    for line in markdown.splitlines():
-        date_match = _DATE_RE.search(line)
-        if date_match:
-            parsed = datetime.strptime(date_match.group(1), "%m/%d/%Y")
-            current_date = parsed.strftime("%Y-%m-%d")
+    for row in soup.find_all("div", class_="row"):
+        cols = row.find_all("div", class_="col-sm", recursive=False)
+        if not cols:
+            continue
+        date_match = _DATE_RE.match(cols[0].get_text(strip=True))
+        if not date_match:
             continue
 
-        if current_date is None:
-            continue
-
-        county_match = _COUNTY_RE.search(line)
-        if county_match:
-            county = county_match.group(1).strip().title()
-            records.append({"sale_date": current_date, "county": county})
+        sale_date = datetime.strptime(date_match.group(1), "%m/%d/%Y").strftime(
+            "%Y-%m-%d"
+        )
+        county_links = row.find_all("a", class_="dropdown-toggle")
+        for link in county_links:
+            county = link.get_text(strip=True).title()
+            if county:
+                records.append({"sale_date": sale_date, "county": county})
 
     return records
 
@@ -54,28 +60,25 @@ class ArkansasCollector(BaseCollector):
 
     @property
     def name(self) -> str:
-        return "arkansas_state_agency"
+        return "arkansas_cosl"
 
     @property
     def source_type(self) -> SourceType:
         return SourceType.STATE_AGENCY
 
     async def _fetch(self) -> list[Auction]:
-        client = create_scrape_client()
-        try:
-            result = await client.scrape(_URL)
-        finally:
-            await client.close()
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
+            resp = await client.get(_URL)
+            resp.raise_for_status()
 
-        markdown = result.fetch.markdown or ""
-        raw_records = parse_catalog(markdown)
+        raw_records = parse_catalog(resp.text)
 
-        if markdown and not raw_records:
+        if not raw_records:
             logger.warning(
                 "no_records_parsed",
                 collector=self.name,
                 url=_URL,
-                markdown_length=len(markdown),
+                html_length=len(resp.text),
             )
 
         auctions: list[Auction] = []
@@ -98,7 +101,7 @@ class ArkansasCollector(BaseCollector):
             state="AR",
             county=raw["county"],
             start_date=date.fromisoformat(raw["sale_date"]),
-            sale_type=SaleType(raw.get("sale_type", "deed")),
+            sale_type=SaleType("deed"),
             source_type=SourceType.STATE_AGENCY,
             source_url=_URL,
             confidence_score=0.85,

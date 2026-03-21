@@ -57,6 +57,7 @@ jobs:
           --collectors publicsurplus
           --collectors linebarger
           --collectors sri
+          --collectors arkansas_cosl
 
       - name: Sync to Supabase
         run: uv run tdc-auction-calendar sync supabase

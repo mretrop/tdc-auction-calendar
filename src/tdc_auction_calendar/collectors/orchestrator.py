@@ -24,7 +24,7 @@ from tdc_auction_calendar.models.health import CollectorError, RunReport
 logger = structlog.get_logger()
 
 COLLECTORS: dict[str, type[BaseCollector]] = {
-    "arkansas_state_agency": ArkansasCollector,
+    "arkansas_cosl": ArkansasCollector,
     "california_state_agency": CaliforniaCollector,
     "colorado_state_agency": ColoradoCollector,
     "iowa_state_agency": IowaCollector,
